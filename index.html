@@ -1,0 +1,1791 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Códigos de Producto y EAN-13 - ZOE</title>
+    <link rel="icon" type="image/png" href="images/favicon.png">
+    <!-- Tailwind CSS para diseño moderno -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome para iconos atractivos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- JsBarcode para generar códigos de barra EAN-13 reales -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Estilo personalizado para impresión de etiquetas */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #printArea, #printArea * {
+                visibility: visible;
+            }
+            #printArea {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                border: none !important;
+                box-shadow: none !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col selection:bg-teal-500 selection:text-white">
+
+    <!-- Encabezado / Navbar -->
+    <header class="border-b border-slate-800 bg-slate-950 sticky top-0 z-50 backdrop-blur-md bg-opacity-95">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="h-10 w-10 rounded-xl bg-gradient-to-tr from-teal-500 to-emerald-400 flex items-center justify-center shadow-lg shadow-teal-500/20">
+                    <span class="text-xl font-black text-slate-950 tracking-wider">Z</span>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+                        ZOE <span class="text-xs bg-teal-500/10 text-teal-400 px-2 py-0.5 rounded-full border border-teal-500/20">EAN-13 Motor Oficial</span>
+                    </h1>
+                    <p class="text-xs text-slate-400">Generación de Nomenclatura y Códigos de Barras</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 sm:gap-3">
+                <button onclick="switchTab('individual')" id="tabBtn-individual" class="px-3 sm:px-4 py-2 text-sm font-medium rounded-lg bg-teal-500 text-slate-950 shadow-lg shadow-teal-500/20 transition-all duration-200">
+                    <i class="fa-solid fa-tag mr-2"></i>Generador Único
+                </button>
+                <button onclick="switchTab('lote')" id="tabBtn-lote" class="px-3 sm:px-4 py-2 text-sm font-medium rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-all duration-200">
+                    <i class="fa-solid fa-tags mr-2"></i>Generar en Lote
+                </button>
+                <button onclick="openInventoryModal()" class="px-3 sm:px-4 py-2 text-sm font-medium rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-all duration-200 flex items-center gap-2 border border-slate-800" title="Buscar códigos vinculados y asignar libres">
+                    <i class="fa-solid fa-magnifying-glass-chart"></i><span class="hidden md:inline">Inventario</span>
+                </button>
+                <button onclick="openEmpaqueSearchModal()" class="px-3 sm:px-4 py-2 text-sm font-medium rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-all duration-200 flex items-center gap-2 border border-slate-800" title="Buscar modelos de empaques ya diseñados">
+                    <i class="fa-solid fa-boxes-stacked"></i><span class="hidden md:inline">Empaques</span>
+                </button>
+                <button onclick="openHelpModal()" class="text-slate-400 hover:text-white transition-colors">
+                    <i class="fa-regular fa-circle-question text-xl"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+        
+        <!-- Alerta informativa inicial -->
+        <div class="bg-gradient-to-r from-teal-950 to-slate-900 border border-teal-500/30 rounded-2xl p-4 mb-8 flex items-start gap-4">
+            <div class="p-2 bg-teal-500/10 text-teal-400 rounded-lg shrink-0">
+                <i class="fa-solid fa-barcode text-lg"></i>
+            </div>
+            <div>
+                <h3 class="font-semibold text-white text-sm">Validación EAN-13 Activada para ZOE</h3>
+                <p class="text-xs text-slate-300 mt-1">
+                    El sistema ahora genera y valida códigos de barras **EAN-13** reales basados en la raíz oficial identificada en tus hojas de cálculo: 
+                    <span class="font-mono bg-slate-950 text-teal-300 px-1.5 py-0.5 rounded border border-slate-800">7451304 (Prefijo de Empresa)</span> + un secuencial de 5 dígitos + Dígito Verificador matemático automático.
+                </p>
+            </div>
+        </div>
+
+        <!-- SECCIÓN: GENERADOR INDIVIDUAL -->
+        <div id="section-individual" class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <!-- Panel Izquierdo: Formulario de creación -->
+            <div class="lg:col-span-7 bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col justify-between">
+                <div>
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-sliders text-teal-400"></i> Parámetros de Producto
+                        </h2>
+                        <button onclick="resetForm()" class="text-xs text-slate-400 hover:text-rose-400 flex items-center gap-1 transition-colors">
+                            <i class="fa-solid fa-arrow-rotate-left"></i> Limpiar Campos
+                        </button>
+                    </div>
+
+                    <div class="space-y-6">
+                        <!-- 1. Código ZOE / Prefijo -->
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">1. Código ZOE (Prefijo - Categoría)</label>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                <button type="button" onclick="selectPrefix('ZCA', 'Accesorios de Auto/Hogar')" id="btn-pre-ZCA" class="prefix-btn p-3 rounded-xl border border-slate-800 bg-slate-900/50 hover:bg-slate-900 text-left transition-all group border-teal-500/40 ring-1 ring-teal-500/20">
+                                    <div class="font-bold text-teal-400 text-lg group-hover:scale-105 transition-transform">ZCA</div>
+                                    <div class="text-[10px] text-slate-400 mt-1 truncate">Accesorios (Topes, Galoneras)</div>
+                                </button>
+                                <button type="button" onclick="selectPrefix('ZCE', 'Herrajes / Pies de amigo')" id="btn-pre-ZCE" class="prefix-btn p-3 rounded-xl border border-slate-800 bg-slate-900/50 hover:bg-slate-900 text-left transition-all group">
+                                    <div class="font-bold text-slate-300 text-lg group-hover:scale-105 transition-transform">ZCE</div>
+                                    <div class="text-[10px] text-slate-400 mt-1 truncate">Herrajes (Pies de Amigo)</div>
+                                </button>
+                                <div class="relative">
+                                    <input type="text" id="custom-prefix" placeholder="OTRO" maxlength="3" oninput="handleCustomPrefix(this)" class="w-full h-full p-3 bg-slate-900/50 border border-slate-800 rounded-xl focus:border-teal-500 focus:outline-none text-slate-200 placeholder-slate-500 font-mono font-bold uppercase tracking-widest text-center">
+                                    <span class="absolute top-1 right-2 text-[8px] text-slate-500 font-semibold uppercase">Manual</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. Número Identificador y Sufijo de Nomenclatura -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">2. N° Ident (4 dígitos)</label>
+                                <div class="relative">
+                                    <input type="text" id="ident-number" maxlength="4" placeholder="Ej: 3064" oninput="validateIdent(this)" class="w-full pl-3 pr-12 py-2.5 bg-slate-900 border border-slate-800 rounded-xl focus:border-teal-500 focus:outline-none text-white font-mono font-bold tracking-widest text-center">
+                                    <button type="button" onclick="generateRandomIdent()" id="btn-random-ident" title="Generar identificador aleatorio de 4 dígitos (evita los ya usados)" class="absolute right-1.5 top-1/2 -translate-y-1/2 h-8 w-9 flex items-center justify-center bg-slate-800 hover:bg-teal-500 hover:text-slate-950 text-teal-400 border border-slate-700 hover:border-teal-400 rounded-lg transition-all">
+                                        <i class="fa-solid fa-dice"></i>
+                                    </button>
+                                </div>
+                                <p id="ident-feedback" class="text-[10px] mt-1 text-slate-500 hidden"></p>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">3. Característica (2 letras)</label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="char-suffix" maxlength="2" placeholder="Ej: TP" oninput="validateSuffix(this)" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-800 rounded-xl focus:border-teal-500 focus:outline-none text-white font-mono font-bold tracking-widest text-center uppercase">
+                                    <select id="common-chars" onchange="selectCommonChar(this)" class="bg-slate-900 border border-slate-800 rounded-xl text-slate-300 text-xs px-2 focus:outline-none focus:border-teal-500">
+                                        <option value="">Atajo</option>
+                                        <option value="TP">TP (Tope)</option>
+                                        <option value="AF">AF (8" Negro)</option>
+                                        <option value="AG">AG (12" Negro)</option>
+                                        <option value="AH">AH (16" Negro)</option>
+                                        <option value="HH">HH (Manilla)</option>
+                                    </select>
+                                </div>
+                                <p id="suffix-feedback" class="text-[10px] mt-1 text-slate-500 hidden"></p>
+                            </div>
+                        </div>
+
+                        <!-- 2b. Validador ZOE en vivo: detecta si la combinacion ZCE-XXXXYY ya existe -->
+                        <div id="zoe-combo-status" class="hidden p-3 rounded-xl border text-xs font-mono flex items-center gap-2"></div>
+
+                        <!-- 2c. Asignacion automatica de codigo libre -->
+                        <div class="p-4 bg-slate-900/60 rounded-xl border border-slate-800 space-y-3">
+                            <h3 class="text-xs font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-2">
+                                <i class="fa-solid fa-box-open"></i> Asignar Código de Barras Libre
+                            </h3>
+                            <p class="text-[11px] text-slate-400">Selecciona automáticamente el siguiente código de barras disponible (Estado <span class="text-emerald-300 font-bold">SIN_UTILIZAR</span>) del inventario y vincúlalo a la nomenclatura ZOE actual.</p>
+                            <div class="flex flex-col sm:flex-row gap-2">
+                                <button type="button" onclick="assignFreeBarcode()" class="flex-1 py-2.5 bg-emerald-500/90 hover:bg-emerald-400 text-slate-950 font-bold rounded-lg text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-500/10">
+                                    <i class="fa-solid fa-bolt"></i> Asignar código libre
+                                </button>
+                                <button type="button" onclick="openInventoryModal('libres')" class="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded-lg text-xs flex items-center justify-center gap-2 transition-all border border-slate-700">
+                                    <i class="fa-solid fa-list"></i> Ver libres (<span id="counter-libres">0</span>)
+                                </button>
+                            </div>
+                            <p id="free-assign-feedback" class="text-[11px] text-slate-400 hidden"></p>
+                        </div>
+
+                        <!-- NUEVA SECCIÓN: ESTRUCTURACIÓN DEL CÓDIGO DE BARRAS EAN-13 -->
+                        <div class="p-4 bg-slate-900/60 rounded-xl border border-slate-800 space-y-4">
+                            <h3 class="text-xs font-bold text-teal-400 uppercase tracking-widest flex items-center gap-2">
+                                <i class="fa-solid fa-barcode"></i> Configuración de Código de Barras EAN-13
+                            </h3>
+                            
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div class="sm:col-span-1">
+                                    <label class="block text-[10px] text-slate-400 mb-1">Prefijo Empresa</label>
+                                    <input type="text" id="ean-company" maxlength="7" value="7451304" oninput="updateEANCalculations()" class="w-full p-2 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 font-mono text-center font-bold">
+                                </div>
+                                <div class="sm:col-span-1">
+                                    <label class="block text-[10px] text-slate-400 mb-1">Secuencial Art. (5 dig)</label>
+                                    <input type="text" id="ean-sequence" maxlength="5" placeholder="Ej: 21592" oninput="validateEanSeq(this)" class="w-full p-2 bg-slate-950 border border-slate-800 rounded-lg text-teal-400 font-mono text-center font-bold">
+                                </div>
+                                <div class="sm:col-span-1">
+                                    <label class="block text-[10px] text-slate-400 mb-1">Verificador (Matemático)</label>
+                                    <div id="ean-checkdigit" class="w-full p-2 bg-slate-950/30 border border-dashed border-slate-800 rounded-lg text-amber-400 font-mono text-center font-black">
+                                        -
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="text-center">
+                                <span class="text-xs text-slate-400">EAN-13 Resultante:</span>
+                                <span id="full-ean-string" class="font-mono text-base font-bold text-white ml-2 tracking-widest bg-slate-950 px-3 py-1 rounded-md border border-slate-800">
+                                    7451304XXXXXX
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Información Adicional para el Registro/Etiqueta -->
+                        <div class="pt-4 border-t border-slate-800 space-y-3">
+                            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Metadatos del Producto</h3>
+                            
+                            <div>
+                                <label class="block text-[11px] text-slate-400 mb-1">Descripción del Producto en Profit / Catálogo</label>
+                                <input type="text" id="prod-desc" placeholder="Ej: TOPE DE PUERTA SEMIESFERA" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg focus:border-teal-500 focus:outline-none text-sm text-white">
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-[11px] text-slate-400 mb-1">Acabado / Color</label>
+                                    <input type="text" id="prod-color" placeholder="Ej: Satin Nickel / Negro" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg focus:border-teal-500 focus:outline-none text-sm text-white">
+                                </div>
+                                <div>
+                                    <div class="flex items-center justify-between mb-1">
+                                        <label id="prod-size-label" for="prod-size" class="block text-[11px] text-slate-400">Medidas / Tamaño</label>
+                                        <select id="prod-size-mode" onchange="updateSizeMode(this.value)" class="bg-slate-900 border border-slate-800 rounded-md text-slate-300 text-[10px] px-1.5 py-0.5 focus:outline-none focus:border-teal-500 uppercase tracking-wider font-semibold" title="Cambia el significado del campo (medidas o tipo de uso)">
+                                            <option value="size">📏 Medidas</option>
+                                            <option value="uso">🚪 Tipo de uso</option>
+                                            <option value="otro">✏️ Otro</option>
+                                        </select>
+                                    </div>
+                                    <input type="text" id="prod-size" placeholder="Ej: 60MM / 8&quot;" data-mode="size" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg focus:border-teal-500 focus:outline-none text-sm text-white">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 pt-4 border-t border-slate-800 flex gap-3">
+                    <button type="button" onclick="addCodeToHistory()" class="flex-grow py-3 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-950 font-bold rounded-xl transition-all shadow-lg shadow-teal-500/10 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-plus-circle"></i> Registrar Código y EAN-13
+                    </button>
+                </div>
+            </div>
+
+            <!-- Panel Derecho: Previsualización de Código y Etiqueta -->
+            <div class="lg:col-span-5 space-y-6">
+                
+                <!-- Tarjeta del Código Generado -->
+                <div class="bg-gradient-to-b from-slate-900 to-slate-950 border-2 border-teal-500/30 rounded-2xl p-6 shadow-2xl relative overflow-hidden group">
+                    <div class="absolute -right-12 -top-12 w-32 h-32 bg-teal-500/10 rounded-full blur-2xl"></div>
+                    
+                    <span class="text-[10px] uppercase font-bold tracking-widest text-teal-400 bg-teal-500/10 border border-teal-500/20 px-2 py-0.5 rounded-full">Código de Barra EAN-13 GS1</span>
+                    
+                    <div class="text-center mt-4">
+                        <div id="preview-text-code" class="text-3xl sm:text-4xl font-black tracking-widest text-white drop-shadow">ZCA-3064TP</div>
+                        <p class="text-slate-400 text-xs mt-1">Nomenclatura Sugerida ZOE</p>
+                    </div>
+
+                    <!-- Gráfico de código de barras real -->
+                    <div class="bg-white p-4 rounded-xl mt-4 flex flex-col justify-center items-center shadow-inner">
+                        <svg id="barcode-svg" class="max-w-full"></svg>
+                    </div>
+
+                    <!-- Control de altura + exportación vectorial -->
+                    <div class="mt-4 p-3 bg-slate-900/60 border border-slate-800 rounded-xl space-y-3">
+                        <div class="flex items-center justify-between gap-3">
+                            <label class="text-[10px] uppercase tracking-widest text-slate-400 font-bold flex items-center gap-2">
+                                <i class="fa-solid fa-arrows-up-down text-teal-400"></i> Altura barras
+                                <span id="barcode-height-label" class="font-mono text-teal-300">90</span>px
+                            </label>
+                            <input type="range" id="barcode-height" min="40" max="180" value="90" step="5" oninput="updateEANCalculations()" class="flex-1 accent-teal-500">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="copyToClipboard('code')" class="py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg border border-slate-700 text-xs font-semibold flex items-center justify-center gap-2 transition-all">
+                                <i class="fa-regular fa-copy"></i> Copiar ZOE
+                            </button>
+                            <button onclick="copyToClipboard('ean')" class="py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg border border-slate-700 text-xs font-semibold flex items-center justify-center gap-2 transition-all">
+                                <i class="fa-regular fa-barcode"></i> Copiar EAN
+                            </button>
+                            <button onclick="downloadBarcodeSVG()" class="py-2 bg-teal-500/90 hover:bg-teal-400 text-slate-950 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-md shadow-teal-500/10">
+                                <i class="fa-solid fa-vector-square"></i> Descargar SVG
+                            </button>
+                            <button onclick="downloadBarcodePNG()" class="py-2 bg-emerald-500/90 hover:bg-emerald-400 text-slate-950 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-500/10">
+                                <i class="fa-solid fa-image"></i> Descargar PNG
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Simulación de Arte de Empaque ZOE (Para impresión directa) -->
+                <div id="printArea" class="bg-white text-slate-950 rounded-2xl p-6 border border-slate-200 shadow-xl relative overflow-hidden">
+                    <div class="border-4 border-amber-500 p-4 rounded-xl">
+                        <!-- Header del Arte -->
+                        <div class="flex justify-between items-start border-b-2 border-slate-900 pb-3">
+                            <div>
+                                <h4 class="text-3xl font-black tracking-tighter text-slate-900">ZOE</h4>
+                                <p class="text-[9px] font-bold tracking-widest uppercase text-slate-500">PREMIUM QUALITY</p>
+                            </div>
+                            <div class="text-right">
+                                <span class="bg-slate-900 text-white text-[10px] font-bold px-2 py-1 rounded">CÓDIGO DE BARRA EAN-13</span>
+                            </div>
+                        </div>
+
+                        <!-- Detalles del producto -->
+                        <div class="my-4 space-y-2">
+                            <h3 id="label-title" class="text-xl font-bold tracking-tight text-slate-900 uppercase">TOPE DE PUERTA</h3>
+                            <div class="grid grid-cols-2 gap-2 text-xs text-slate-700">
+                                <div>
+                                    <span class="font-semibold block text-[10px] text-slate-400 uppercase">Color/Acabado:</span>
+                                    <span id="label-color" class="font-bold text-slate-900">Satin Nickel</span>
+                                </div>
+                                <div>
+                                    <span id="label-size-title" class="font-semibold block text-[10px] text-slate-400 uppercase">Medidas:</span>
+                                    <span id="label-size" class="font-bold text-slate-900">60 MM</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Código de Barras EAN-13 Oficial -->
+                        <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 flex flex-col items-center">
+                            <!-- SVG donde se dibujará el EAN-13 real con etiquetas estandarizadas -->
+                            <svg id="barcode-label-svg"></svg>
+                            <span id="label-code-str" class="text-sm font-black tracking-widest text-slate-600 mt-1">ZCA-3064TP</span>
+                        </div>
+
+                        <div class="mt-3 text-center text-[8px] text-slate-400 uppercase font-medium">
+                            Arte de Producto ZOE • Sistema de Etiquetado de Almacén
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center">
+                    <button onclick="printLabel()" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl border border-slate-700 font-bold flex items-center justify-center gap-2 transition-all">
+                        <i class="fa-solid fa-print"></i> Imprimir Etiqueta Formato ZOE
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
+
+        <!-- SECCIÓN: GENERADOR EN LOTES -->
+        <div id="section-lote" class="hidden space-y-6">
+            <div class="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-xl">
+                <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-tags text-teal-400"></i> Generación Masiva por Lotes
+                </h2>
+                <p class="text-sm text-slate-400 mb-6">Genera de forma secuencial tanto la nomenclatura ZOE como sus respectivos códigos de barras EAN-13 matemáticos correlativos.</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-2">Prefijo Base ZOE</label>
+                        <select id="batch-prefix" class="w-full p-3 bg-slate-900 border border-slate-800 rounded-xl focus:border-teal-500 focus:outline-none text-white font-mono font-bold">
+                            <option value="ZCA">ZCA - Accesorios</option>
+                            <option value="ZCE">ZCE - Herrajes</option>
+                            <option value="ZCO">ZCO - Otros</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-2">Sufijo Base (2 Letras)</label>
+                        <input type="text" id="batch-suffix" value="TP" maxlength="2" class="w-full p-3 bg-slate-900 border border-slate-800 rounded-xl focus:border-teal-500 focus:outline-none text-white font-mono font-bold uppercase text-center">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-2">Secuencial EAN Inicial (5 dig)</label>
+                        <input type="text" id="batch-ean-start" value="21600" maxlength="5" class="w-full p-3 bg-slate-900 border border-slate-800 rounded-xl focus:border-teal-500 focus:outline-none text-white font-mono font-bold text-center">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-2">Identificador ZOE Inicial</label>
+                        <input type="number" id="batch-ident-start" value="3000" min="1000" max="9999" class="w-full p-3 bg-slate-900 border border-slate-800 rounded-xl focus:border-teal-500 focus:outline-none text-white font-mono font-bold text-center">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-2">Cantidad</label>
+                        <input type="number" id="batch-qty" value="10" min="1" max="100" class="w-full p-3 bg-slate-900 border border-slate-800 rounded-xl focus:border-teal-500 focus:outline-none text-white font-mono font-bold text-center">
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-3">
+                    <button onclick="generateBatch()" class="px-6 py-3 bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold rounded-xl transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Generar Lote Completo (EAN-13 Auto)
+                    </button>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- TABLA DE HISTORIAL / EXPORTADOR -->
+        <div class="mt-12 bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
+            <div class="px-6 py-5 border-b border-slate-800 bg-slate-950 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-list-check text-teal-400"></i> Repositorio de Códigos y EAN-13 Generados
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-1">Los códigos generados en esta sesión se encuentran listos para ser importados a Profit o descargados como Excel.</p>
+                </div>
+                <div class="flex gap-2 w-full sm:w-auto">
+                    <button onclick="exportToCSV()" class="flex-grow sm:flex-none px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors">
+                        <i class="fa-solid fa-file-excel"></i> Exportar a Excel (CSV)
+                    </button>
+                    <button onclick="clearHistory()" class="px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-xs font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors">
+                        <i class="fa-solid fa-trash-can"></i> Limpiar Tabla
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tabla de datos -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-900 text-slate-400 text-xs font-semibold uppercase tracking-wider border-b border-slate-800">
+                            <th class="px-6 py-3.5">Modelo/Código Sugerido</th>
+                            <th class="px-6 py-3.5">Código de Barras EAN-13</th>
+                            <th class="px-6 py-3.5">Prefijo</th>
+                            <th class="px-6 py-3.5">Ident</th>
+                            <th class="px-6 py-3.5">Sufijo</th>
+                            <th class="px-6 py-3.5">Descripción del Producto</th>
+                            <th class="px-6 py-3.5">Color/Acabado</th>
+                            <th class="px-6 py-3.5">Variable</th>
+                            <th class="px-6 py-3.5">Medida/Uso</th>
+                            <th class="px-6 py-3.5" class="text-center">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-rows" class="divide-y divide-slate-800 text-sm text-slate-300">
+                        <!-- Filas dinámicas -->
+                        <tr id="empty-state">
+                            <td colspan="10" class="text-center py-12 text-slate-500">
+                                <i class="fa-solid fa-barcode text-4xl mb-3 block opacity-40"></i>
+                                No hay códigos registrados. Genera uno nuevo arriba.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="p-4 bg-slate-900 border-t border-slate-800 flex justify-between items-center text-xs text-slate-400">
+                <span id="counter-total">Total: 0 Artículos</span>
+                <span>Estándar EAN-13 Global GS1 (ZOE)</span>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modal de Ayuda / Glosario -->
+    <div id="help-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 m-4 shadow-2xl relative">
+            <button onclick="closeHelpModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-xl">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-calculator text-teal-400"></i> Estructura EAN-13 de ZOE
+            </h3>
+            
+            <div class="space-y-4 text-sm text-slate-300">
+                <p>Para asegurar que los códigos escaneen correctamente con lectores de mano, ZOE utiliza el estándar europeo/global **EAN-13**. La estructura matemática se compone de:</p>
+                
+                <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center">
+                    <span class="font-mono font-bold text-teal-400 text-lg tracking-widest">7451304</span>
+                    <span class="font-mono font-bold text-emerald-400 text-lg tracking-widest">21592</span>
+                    <span class="font-mono font-bold text-amber-400 text-lg tracking-widest">9</span>
+                </div>
+
+                <ul class="space-y-3 pt-2">
+                    <li class="flex items-start gap-2">
+                        <span class="font-mono bg-slate-950 text-teal-400 px-1.5 py-0.5 rounded text-xs">7451304</span>
+                        <span>**Prefijo de Compañía GS1:** Identifica a ZOE en el sistema internacional de código de barras.</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="font-mono bg-slate-950 text-emerald-400 px-1.5 py-0.5 rounded text-xs">5 Dígitos</span>
+                        <span>**Secuencial del Producto:** Asignado internamente (ejemplo: `21592` para el tope de puerta).</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="font-mono bg-slate-950 text-amber-400 px-1.5 py-0.5 rounded text-xs">Último Dígito</span>
+                        <span>**Checksum (Dígito de Control):** Se calcula con un algoritmo ponderado (impar x1, par x3) para evitar lecturas fallidas.</span>
+                    </li>
+                </ul>
+            </div>
+            
+            <button onclick="closeHelpModal()" class="w-full mt-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-lg text-xs transition-colors">
+                Entendido
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast de Notificación -->
+    <div id="toast" class="fixed bottom-6 right-6 bg-teal-500 text-slate-950 px-4 py-3 rounded-xl font-semibold shadow-2xl flex items-center gap-2 transform translate-y-20 opacity-0 transition-all duration-300 z-50 text-sm">
+        <i class="fa-solid fa-circle-check"></i>
+        <span id="toast-message">Copiado al portapapeles</span>
+    </div>
+
+    <!-- Modal: Inventario / Buscador de Codigos Vinculados -->
+    <div id="inventory-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300 p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl relative">
+            <div class="p-5 border-b border-slate-800 flex justify-between items-start gap-4">
+                <div>
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-magnifying-glass-chart text-teal-400"></i> Inventario de Códigos de Barras
+                    </h3>
+                    <p class="text-xs text-slate-400 mt-1">Busca códigos vinculados (ZCE, ZCA u otras líneas) o selecciona uno libre para asignarlo.</p>
+                </div>
+                <button onclick="closeInventoryModal()" class="text-slate-400 hover:text-white text-xl shrink-0">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="p-5 border-b border-slate-800 space-y-3">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <div class="md:col-span-2">
+                        <label class="block text-[10px] text-slate-400 mb-1 uppercase tracking-wider font-semibold">Buscar (código ZOE, EAN-13, descripción o carpeta)</label>
+                        <div class="relative">
+                            <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+                            <input type="text" id="inv-search" oninput="renderInventoryTable()" placeholder="Ej: ZCE-3064TP, 745130421592, Tope, Cerradura..." class="w-full pl-9 pr-3 py-2.5 bg-slate-950 border border-slate-800 rounded-lg focus:border-teal-500 focus:outline-none text-sm text-white font-mono">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-400 mb-1 uppercase tracking-wider font-semibold">Línea / Prefijo</label>
+                        <select id="inv-prefix" onchange="renderInventoryTable()" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg focus:border-teal-500 focus:outline-none text-sm text-white font-mono">
+                            <option value="">Todas</option>
+                            <option value="ZCE">ZCE</option>
+                            <option value="ZCA">ZCA</option>
+                            <option value="ZCO">ZCO</option>
+                            <option value="LIBRE">SIN_UTILIZAR (Libres)</option>
+                            <option value="USADO">EN_USO (Asignados)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-400 mb-1 uppercase tracking-wider font-semibold">Ordenar por</label>
+                        <select id="inv-sort" onchange="renderInventoryTable()" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg focus:border-teal-500 focus:outline-none text-sm text-white">
+                            <option value="bc-asc">EAN-13 (ascendente)</option>
+                            <option value="bc-desc">EAN-13 (descendente)</option>
+                            <option value="zce-asc">Nomenclatura ZOE (A-Z)</option>
+                            <option value="cat-asc">Categoría (A-Z)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
+                    <span class="font-mono bg-slate-950 px-2 py-1 rounded border border-slate-800"><span class="text-teal-400 font-bold" id="inv-counter-total">0</span> códigos en inventario</span>
+                    <span class="font-mono bg-slate-950 px-2 py-1 rounded border border-slate-800"><span class="text-amber-400 font-bold" id="inv-counter-usados">0</span> EN_USO</span>
+                    <span class="font-mono bg-slate-950 px-2 py-1 rounded border border-slate-800"><span class="text-emerald-400 font-bold" id="inv-counter-libres">0</span> SIN_UTILIZAR</span>
+                    <span id="inv-counter-result" class="font-mono text-slate-500 ml-auto">Sin resultados aún</span>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-5">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead class="sticky top-0 bg-slate-900 z-10">
+                        <tr class="text-[10px] text-slate-400 uppercase tracking-wider border-b border-slate-800">
+                            <th class="py-2 pr-3">Estado</th>
+                            <th class="py-2 pr-3">EAN-13</th>
+                            <th class="py-2 pr-3">Nomenclatura ZOE</th>
+                            <th class="py-2 pr-3">Categoría</th>
+                            <th class="py-2 pr-3">Carpeta</th>
+                            <th class="py-2 pr-3 text-center">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inv-rows" class="divide-y divide-slate-800 text-slate-300"></tbody>
+                </table>
+                <div id="inv-empty" class="text-center py-12 text-slate-500 hidden">
+                    <i class="fa-solid fa-box-open text-4xl mb-3 block opacity-40"></i>
+                    Sin coincidencias para los filtros aplicados.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Buscador de Empaques (Diseños Jason Manillas Sep2024) -->
+    <div id="empaque-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300 p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-6xl max-h-[90vh] flex flex-col shadow-2xl relative">
+            <div class="p-5 border-b border-slate-800 flex justify-between items-start gap-4">
+                <div>
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-boxes-stacked text-amber-400"></i> Buscador de Empaques / Diseños
+                    </h3>
+                    <p class="text-xs text-slate-400 mt-1">Verifica modelos de manillas y cerraduras ya diseñados para evitar duplicados. Fuente: <span class="font-mono text-amber-300">DISEÑOS ARTES ZOE PARA JASON MANILLAS (SEP2024)</span></p>
+                </div>
+                <button onclick="closeEmpaqueSearchModal()" class="text-slate-400 hover:text-white text-xl shrink-0">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="p-5 border-b border-slate-800 space-y-3">
+                <div class="grid grid-cols-1 md:grid-cols-6 gap-3">
+                    <div class="md:col-span-2">
+                        <label class="block text-[10px] text-slate-400 mb-1 uppercase tracking-wider font-semibold">Buscar por nombre, código, ciudad o material</label>
+                        <div class="relative">
+                            <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+                            <input type="text" id="emp-search" oninput="renderEmpaqueTable()" placeholder="Ej: OSAKA, ACERO INOX, ZCE-9174, CERRADURA..." class="w-full pl-9 pr-3 py-2.5 bg-slate-950 border border-slate-800 rounded-lg focus:border-amber-500 focus:outline-none text-sm text-white">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-400 mb-1 uppercase tracking-wider font-semibold">Tipo de Producto</label>
+                        <select id="emp-tipo" onchange="renderEmpaqueTable()" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg focus:border-amber-500 focus:outline-none text-sm text-white">
+                            <option value="">Todos</option>
+                            <option value="MANILLA">Manillas</option>
+                            <option value="CERRADURA">Cerraduras</option>
+                            <option value="MASTER">Solo Master Packs</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-400 mb-1 uppercase tracking-wider font-semibold">Empaque</label>
+                        <select id="emp-nivel" onchange="renderEmpaqueTable()" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg focus:border-amber-500 focus:outline-none text-sm text-white">
+                            <option value="">Todos los niveles</option>
+                            <option value="CON_SUB">Con Sub-empaque (+ Masterpack)</option>
+                            <option value="SIN_SUB">Sin Sub-empaque (Final + Masterpack)</option>
+                            <option value="SOLO_MASTER">Solo Masterpack</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-400 mb-1 uppercase tracking-wider font-semibold">Material / Color</label>
+                        <select id="emp-material" onchange="renderEmpaqueTable()" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg focus:border-amber-500 focus:outline-none text-sm text-white">
+                            <option value="">Todos</option>
+                            <option value="ACERO">Acero / Inox</option>
+                            <option value="NEGRA">Negro</option>
+                            <option value="BLANCA">Blanco</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-400 mb-1 uppercase tracking-wider font-semibold">Forma</label>
+                        <select id="emp-forma" onchange="renderEmpaqueTable()" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg focus:border-amber-500 focus:outline-none text-sm text-white">
+                            <option value="">Todas</option>
+                            <option value="REDONDA">Redonda</option>
+                            <option value="CUADRADA">Cuadrada</option>
+                            <option value="OVALADA">Ovalada</option>
+                            <option value="PLACA">Placa</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
+                    <span class="font-mono bg-slate-950 px-2 py-1 rounded border border-slate-800"><span class="text-amber-400 font-bold" id="emp-counter-total">0</span> modelos</span>
+                    <span class="font-mono bg-slate-950 px-2 py-1 rounded border border-slate-800"><i class="fa-solid fa-layer-group text-cyan-400 mr-1"></i><span class="text-cyan-400 font-bold" id="emp-counter-consub">0</span> con sub-empaque</span>
+                    <span class="font-mono bg-slate-950 px-2 py-1 rounded border border-slate-800"><i class="fa-solid fa-box text-rose-400 mr-1"></i><span class="text-rose-400 font-bold" id="emp-counter-sinsub">0</span> sin sub-empaque</span>
+                    <span class="font-mono bg-slate-950 px-2 py-1 rounded border border-slate-800"><i class="fa-solid fa-truck-box text-purple-400 mr-1"></i><span class="text-purple-400 font-bold" id="emp-counter-master">0</span> masterpacks</span>
+                    <span id="emp-counter-result" class="font-mono text-slate-500 ml-auto">Sin resultados</span>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-5">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead class="sticky top-0 bg-slate-900 z-10">
+                        <tr class="text-[10px] text-slate-400 uppercase tracking-wider border-b border-slate-800">
+                            <th class="py-2 pr-3">#</th>
+                            <th class="py-2 pr-3">Código ZOE</th>
+                            <th class="py-2 pr-3">Tipo</th>
+                            <th class="py-2 pr-3">Material</th>
+                            <th class="py-2 pr-3">Forma</th>
+                            <th class="py-2 pr-3">Ciudad (Modelo)</th>
+                            <th class="py-2 pr-3">Nivel de Empaque</th>
+                            <th class="py-2 pr-3">Archivos</th>
+                            <th class="py-2 pr-3 text-center">Copiar</th>
+                        </tr>
+                    </thead>
+                    <tbody id="emp-rows" class="divide-y divide-slate-800 text-slate-300"></tbody>
+                </table>
+                <div id="emp-empty" class="text-center py-12 text-slate-500 hidden">
+                    <i class="fa-solid fa-box-open text-4xl mb-3 block opacity-40"></i>
+                    Sin coincidencias para los filtros aplicados.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pie de página -->
+    <footer class="bg-slate-950 border-t border-slate-800 py-6 mt-12 text-center text-xs text-slate-500">
+        <p>© 2026 ZOE. Todos los derechos reservados. Diseñado para simplificar la creación de inventario.</p>
+    </footer>
+
+    <!-- Lógica de la aplicación -->
+    <script>
+        // =================================================================
+        // INVENTARIO EMBEBIDO: Códigos de barras en uso y libres (ZOE)
+        // Origen: INVENTARIO_CODIGOS_BARRAS.csv (97 EAN-13 únicos)
+        // Claves: bc = EAN-13 (13 dígitos), zce = nomenclatura ZOE,
+        // cat = categoría, estado = EN_USO | SIN_UTILIZAR, carpeta
+        // =================================================================
+        const INVENTORY = [{"bc":"7451304212737","zce":"ZCE-8393BE","cat":"CerradurasEmbutir","estado":"EN_USO","carpeta":"ZCE-8393BE"},{"bc":"7451304212744","zce":"ZCE-9627BF","cat":"CerradurasEmbutir","estado":"EN_USO","carpeta":"ZCE-9627BF"},{"bc":"7451304212751","zce":"ZCE-2968BG","cat":"CerradurasEmbutir","estado":"EN_USO","carpeta":"ZCE-2968BG"},{"bc":"7451304212768","zce":"ZCE-4469BH","cat":"CerradurasEmbutir","estado":"EN_USO","carpeta":"ZCE-4469BH"},{"bc":"7451304212775","zce":"ZCE-6862BI","cat":"CerradurasEmbutir","estado":"EN_USO","carpeta":"ZCE-6862BI"},{"bc":"7451304212782","zce":"ZCE-4828BJ","cat":"CerradurasEmbutir","estado":"EN_USO","carpeta":"ZCE-4828BJ"},{"bc":"7451304212799","zce":"ZCE-2693BK","cat":"CerradurasEmbutir","estado":"EN_USO","carpeta":"ZCE-2693BK"},{"bc":"7451304212805","zce":"ZCE-7858BL","cat":"CerradurasEmbutir","estado":"EN_USO","carpeta":"ZCE-7858BL"},{"bc":"7451304212843","zce":"","cat":"Raiz","estado":"EN_USO","carpeta":"ADOLFO CODIGOS DE BARRAS"},{"bc":"7451304212898","zce":"","cat":"2018","estado":"EN_USO","carpeta":"Candado de Anticizalla"},{"bc":"7451304212904","zce":"ZCE-6554BV","cat":"2018","estado":"EN_USO","carpeta":"ZCE-6554BV"},{"bc":"7451304213307","zce":"ZCE-5874DJ","cat":"PDF","estado":"EN_USO","carpeta":"ZCE-5874DJ"},{"bc":"7451304213321","zce":"ZCE-4294DL","cat":"PDF","estado":"EN_USO","carpeta":"ZCE-4294DL"},{"bc":"7451304213383","zce":"ZCE-1799DU","cat":"PDF","estado":"EN_USO","carpeta":"ZCE-1799DU"},{"bc":"7451304213406","zce":"ZCE-1583DW","cat":"PDF","estado":"EN_USO","carpeta":"ZCE-1583DW"},{"bc":"7451304214564","zce":"ZCE-6979BY","cat":"2018","estado":"EN_USO","carpeta":"ZCE-6979BY"},{"bc":"7451304214779","zce":"","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"USADOS EN 2021"},{"bc":"7451304215950","zce":"ZCE-2981AA","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"1-ZCE-2981AA"},{"bc":"7451304215967","zce":"ZCE-4634AB","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"2-ZCE-4634AB"},{"bc":"7451304215974","zce":"ZCE-4321AC","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"3-ZCE-4321AC"},{"bc":"7451304215981","zce":"ZCE-7856AD","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"4-ZCE-7856AD"},{"bc":"7451304215998","zce":"ZCE-9147AE","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"5-ZCE-9147AE"},{"bc":"7451304216001","zce":"ZCE-2583AF","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"6-ZCE-2583AF"},{"bc":"7451304216018","zce":"ZCE-6712AG","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"7-ZCE-6712AG"},{"bc":"7451304216025","zce":"ZCE-3409AH","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"8-ZCE-3409AH"},{"bc":"7451304216032","zce":"ZCE-8745AI","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"9-ZCE-8745AI"},{"bc":"7451304216049","zce":"ZCE-1234AJ","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"10-ZCE-1234AJ"},{"bc":"7451304216056","zce":"ZCE-5678AK","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"11-ZCE-5678AK"},{"bc":"7451304216063","zce":"ZCE-9012AL","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"12-ZCE-9012AL"},{"bc":"7451304216070","zce":"ZCE-3456AM","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"13-ZCE-3456AM"},{"bc":"7451304216087","zce":"ZCE-7890AN","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"14-ZCE-7890AN"},{"bc":"7451304216094","zce":"ZCE-2345AO","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"15-ZCE-2345AO"},{"bc":"7451304216100","zce":"ZCE-6789AP","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"16-ZCE-6789AP"},{"bc":"7451304216117","zce":"ZCE-1122AQ","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"17-ZCE-1122AQ"},{"bc":"7451304216124","zce":"ZCE-3344AR","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"18-ZCE-3344AR"},{"bc":"7451304216131","zce":"ZCE-5566AS","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"19-ZCE-5566AS"},{"bc":"7451304216148","zce":"ZCE-7788AT","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"20-ZCE-7788AT"},{"bc":"7451304216155","zce":"ZCE-9900AU","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"21-ZCE-9900AU"},{"bc":"7451304216162","zce":"ZCE-1357AV","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"22-ZCE-1357AV"},{"bc":"7451304216179","zce":"ZCE-2468AW","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"23-ZCE-2468AW"},{"bc":"7451304216186","zce":"ZCE-8642AX","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"24-ZCE-8642AX"},{"bc":"7451304216193","zce":"ZCE-9753AY","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"25-ZCE-9753AY"},{"bc":"7451304216209","zce":"ZCE-1597AZ","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"26-ZCE-1597AZ"},{"bc":"7451304216216","zce":"ZCE-7531BA","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"27-ZCE-7531BA"},{"bc":"7451304216223","zce":"ZCE-4826BB","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"28-ZCE-4826BB"},{"bc":"7451304216230","zce":"ZCE-6914BC","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"29-ZCE-6914BC"},{"bc":"7451304216247","zce":"ZCE-8257BD","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"30-ZCE-8257BD"},{"bc":"7451304216254","zce":"ZCE-3478BE","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"31-ZCE-3478BE"},{"bc":"7451304216261","zce":"ZCE-9124BF","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"32-ZCE-9124BF"},{"bc":"7451304216278","zce":"ZCE-5693BG","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"33-ZCE-5693BG"},{"bc":"7451304216285","zce":"ZCE-1472BH","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"34-ZCE-1472BH"},{"bc":"7451304216292","zce":"ZCE-8526BI","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"35-ZCE-8526BI"},{"bc":"7451304216308","zce":"ZCE-4271BJ","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"36-ZCE-4271BJ"},{"bc":"7451304216315","zce":"ZCE-6395BK","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"37-ZCE-6395BK"},{"bc":"7451304216322","zce":"ZCE-2847BL","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"38-ZCE-2847BL"},{"bc":"7451304216339","zce":"ZCE-7182BM","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"39-ZCE-7182BM"},{"bc":"7451304216346","zce":"ZCE-9516BN","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"40-ZCE-9516BN"},{"bc":"7451304216353","zce":"ZCE-3758BO","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"41-ZCE-3758BO"},{"bc":"7451304216360","zce":"ZCE-6429BP","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"42-ZCE-6429BP"},{"bc":"7451304216377","zce":"ZCE-1836BQ","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"43-ZCE-1836BQ"},{"bc":"7451304216384","zce":"ZCE-5247BR","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"44-ZCE-5247BR"},{"bc":"7451304216391","zce":"ZCE-7962BS","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"45-ZCE-7962BS"},{"bc":"7451304216407","zce":"ZCE-3614BT","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"46-ZCE-3614BT"},{"bc":"7451304216414","zce":"ZCE-8251BU","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"47-ZCE-8251BU"},{"bc":"7451304216421","zce":"ZCE-4893BV","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"48-ZCE-4893BV"},{"bc":"7451304216438","zce":"ZCE-6172BW","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"49-ZCE-6172BW"},{"bc":"7451304216445","zce":"ZCE-2538BX","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"50-ZCE-2538BX"},{"bc":"7451304216452","zce":"ZCE-9417BY","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"51-ZCE-9417BY"},{"bc":"7451304216469","zce":"ZCE-3826BZ","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"52-ZCE-3826BZ"},{"bc":"7451304216476","zce":"ZCE-7159CA","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"53-ZCE-7159CA"},{"bc":"7451304216483","zce":"ZCE-4631CB","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"54-ZCE-4631CB"},{"bc":"7451304216490","zce":"ZCE-8284CC","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"55-ZCE-8284CC"},{"bc":"7451304216506","zce":"ZCE-1572CD","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"56-ZCE-1572CD"},{"bc":"7451304216513","zce":"ZCE-6925CE","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"57-ZCE-6925CE"},{"bc":"7451304216520","zce":"ZCE-3418CF","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"58-ZCE-3418CF"},{"bc":"7451304216537","zce":"ZCE-5783CG","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"59-ZCE-5783CG"},{"bc":"7451304216544","zce":"ZCE-8126CH","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"60-ZCE-8126CH"},{"bc":"7451304216551","zce":"ZCE-4295CI","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"61-ZCE-4295CI"},{"bc":"7451304216568","zce":"ZCE-6748CJ","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"62-ZCE-6748CJ"},{"bc":"7451304216575","zce":"ZCE-9131CK","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"63-ZCE-9131CK"},{"bc":"7451304216582","zce":"ZCE-2864CL","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"64-ZCE-2864CL"},{"bc":"7451304216599","zce":"ZCE-7519CM","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"65-ZCE-7519CM"},{"bc":"7451304216605","zce":"ZCE-3246CN","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"66-ZCE-3246CN"},{"bc":"7451304216612","zce":"ZCE-6981CO","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"67-ZCE-6981CO"},{"bc":"7451304216629","zce":"ZCE-1428CP","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"68-ZCE-1428CP"},{"bc":"7451304216636","zce":"ZCE-8753CQ","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"69-ZCE-8753CQ"},{"bc":"7451304216643","zce":"ZCE-4296CR","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"70-ZCE-4296CR"},{"bc":"7451304216650","zce":"ZCE-6158CS","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"71-ZCE-6158CS"},{"bc":"7451304216667","zce":"ZCE-2837CT","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"72-ZCE-2837CT"},{"bc":"7451304216674","zce":"ZCE-9514CU","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"73-ZCE-9514CU"},{"bc":"7451304216681","zce":"ZCE-3742CV","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"74-ZCE-3742CV"},{"bc":"7451304216698","zce":"ZCE-7628CW","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"75-ZCE-7628CW"},{"bc":"7451304216704","zce":"ZCE-4193CX","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"76-ZCE-4193CX"},{"bc":"7451304216896","zce":"","cat":"CerraduraPomoMinimalista","estado":"EN_USO","carpeta":"CerraduraPomoMinimalista"},{"bc":"7451304216902","zce":"","cat":"CodBarrasPomoEsfera","estado":"EN_USO","carpeta":"CodBarrasPomoEsfera"},{"bc":"7451304217411","zce":"ZCA-3064TP","cat":"ZCA","estado":"EN_USO","carpeta":"ZCA-3064TP"},{"bc":"7451304217428","zce":"ZCA-3025TP","cat":"ZCA","estado":"EN_USO","carpeta":"ZCA-3025TP"}];
+
+        // Set de EAN-13 en uso (para validaciones rápidas)
+        const USED_BARCODES = new Set(INVENTORY.filter(x => x.estado === 'EN_USO').map(x => x.bc));
+        // Set de nomenclaturas ZOE ya asignadas (para evitar duplicados)
+        const USED_ZOE_CODES = new Set(INVENTORY.filter(x => x.zce && x.estado === 'EN_USO').map(x => x.zce));
+
+        // Estado de la sesión
+        let activePrefix = 'ZCA';
+        let generatedCodes = [];
+        let assignedInSession = new Set(); // EANs ya consumidos por "Asignar libre" en esta sesión
+
+        // Inicialización al cargar la página
+        window.onload = function() {
+            // Valores por defecto consistentes con tus archivos
+            document.getElementById('ident-number').value = '3064';
+            document.getElementById('char-suffix').value = 'TP';
+            document.getElementById('ean-sequence').value = '21592';
+            document.getElementById('prod-desc').value = 'TOPE DE PUERTA';
+            document.getElementById('prod-color').value = 'Satin nickel';
+            document.getElementById('prod-size').value = '60 MM';
+
+            updateEANCalculations();
+
+            // Cargar códigos iniciales directamente desde los archivos que subiste (con EAN-13 reales correctos)
+            generatedCodes = [
+                { code: 'ZCA-3064TP', ean: '7451304215929', prefix: 'ZCA', ident: '3064', suffix: 'TP', desc: 'TOPE DE PUERTA', color: 'Satin nickel', size: '60 MM' },
+                { code: 'ZCA-3025TP', ean: '7451304216896', prefix: 'ZCA', ident: '3025', suffix: 'TP', desc: 'TANQUE O GALONERA DE COMBUSTIBLE PORTÁTIL', color: 'Rojo', size: 'Portátil' },
+                { code: 'ZCE-6729AF', ean: '7451304215370', prefix: 'ZCE', ident: '6729', suffix: 'AF', desc: 'PIE DE AMIGO PLEGABLE DE 8" NEGRO', color: 'Negro', size: '8"' },
+                { code: 'ZCE-4231AG', ean: '7451304215387', prefix: 'ZCE', ident: '4231', suffix: 'AG', desc: 'PIE DE AMIGO PLEGABLE DE 12" NEGRO', color: 'Negro', size: '12"' }
+            ];
+            renderHistory();
+            updateInventoryCounters();
+            updateZoeComboStatus();
+        }
+
+        // Navegación entre pestañas
+        function switchTab(tabId) {
+            const tabs = ['individual', 'lote'];
+            tabs.forEach(t => {
+                const sec = document.getElementById(`section-${t}`);
+                const btn = document.getElementById(`tabBtn-${t}`);
+                if (t === tabId) {
+                    sec.classList.remove('hidden');
+                    btn.classList.add('bg-teal-500', 'text-slate-950', 'shadow-lg', 'shadow-teal-500/20');
+                    btn.classList.remove('text-slate-300', 'hover:text-white', 'hover:bg-slate-800');
+                } else {
+                    sec.classList.add('hidden');
+                    btn.classList.remove('bg-teal-500', 'text-slate-950', 'shadow-lg', 'shadow-teal-500/20');
+                    btn.classList.add('text-slate-300', 'hover:text-white', 'hover:bg-slate-800');
+                }
+            });
+        }
+
+        // Seleccionar Prefijo de Código ZOE
+        function selectPrefix(prefix, name) {
+            activePrefix = prefix;
+            document.getElementById('custom-prefix').value = '';
+            
+            // Estilos de botones
+            document.querySelectorAll('.prefix-btn').forEach(btn => {
+                btn.classList.remove('border-teal-500/40', 'ring-1', 'ring-teal-500/20');
+                const title = btn.querySelector('div');
+                if (title) title.className = "font-bold text-slate-300 text-lg";
+            });
+
+            const activeBtn = document.getElementById(`btn-pre-${prefix}`);
+            if (activeBtn) {
+                activeBtn.classList.add('border-teal-500/40', 'ring-1', 'ring-teal-500/20');
+                const title = activeBtn.querySelector('div');
+                if (title) title.className = "font-bold text-teal-400 text-lg";
+            }
+
+            updateEANCalculations();
+            updateZoeComboStatus();
+        }
+
+        // Prefijo manual
+        function handleCustomPrefix(input) {
+            let val = input.value.toUpperCase();
+            if (val.length > 0 && val[0] !== 'Z') {
+                val = 'Z' + val;
+            }
+            input.value = val.substring(0, 3);
+            
+            if (input.value.length === 3) {
+                activePrefix = input.value;
+                document.querySelectorAll('.prefix-btn').forEach(btn => {
+                    btn.classList.remove('border-teal-500/40', 'ring-1', 'ring-teal-500/20');
+                    const title = btn.querySelector('div');
+                    if (title) title.className = "font-bold text-slate-300 text-lg";
+                });
+                updateEANCalculations();
+                updateZoeComboStatus();
+            }
+        }
+
+        function validateIdent(input) {
+            input.value = input.value.replace(/[^0-9]/g, '');
+            updateEANCalculations();
+        }
+
+        function validateSuffix(input) {
+            input.value = input.value.replace(/[^a-zA-Z]/g, '').toUpperCase();
+            updateEANCalculations();
+        }
+
+        function selectCommonChar(select) {
+            if (select.value) {
+                document.getElementById('char-suffix').value = select.value;
+                updateEANCalculations();
+            }
+        }
+
+        function validateEanSeq(input) {
+            input.value = input.value.replace(/[^0-9]/g, '');
+            // Si el usuario introduce menos de 5 dígitos, se calculan con ceros a la izquierda
+            updateEANCalculations();
+        }
+
+        // =================================================================
+        // MODO DEL CAMPO "Medidas / Tipo de uso"
+        // size = medidas fisicas (60MM, 8", 12")
+        // uso  = ambiente de aplicacion (Bano, Habitacion, Exterior, Sobreponer)
+        // otro = texto libre con etiqueta personalizada
+        // =================================================================
+        const SIZE_MODES = {
+            size: { label: 'Medidas / Tamaño',     placeholder: 'Ej: 60MM / 8"',  printTitle: 'Medidas:' },
+            uso:  { label: 'Tipo de uso / Ambiente', placeholder: 'Ej: Baño / Habitación / Exterior / Sobreponer', printTitle: 'Tipo de uso:' },
+            otro: { label: 'Variable personalizada', placeholder: 'Escribe el nombre de la variable',  printTitle: '' }
+        };
+
+        function updateSizeMode(mode) {
+            const cfg = SIZE_MODES[mode] || SIZE_MODES.size;
+            const input = document.getElementById('prod-size');
+            const label = document.getElementById('prod-size-label');
+            const printTitle = document.getElementById('label-size-title');
+            input.dataset.mode = mode;
+            input.placeholder = cfg.placeholder;
+            label.textContent = cfg.label;
+            printTitle.textContent = cfg.printTitle || cfg.label;
+            if (mode === 'otro') {
+                const custom = prompt('Nombre personalizado para esta variable (se mostrará en la etiqueta impresa):', 'Especificaciones');
+                if (custom && custom.trim()) {
+                    SIZE_MODES.otro.label = custom.trim();
+                    SIZE_MODES.otro.printTitle = custom.trim() + ':';
+                    label.textContent = custom.trim();
+                    printTitle.textContent = custom.trim() + ':';
+                }
+            }
+            updateEANCalculations();
+        }
+
+        // =================================================================
+        // DESCARGA DEL CODIGO DE BARRAS COMO SVG (VECTORIAL) / PNG
+        // =================================================================
+        function getCurrentBarcodeSVG() {
+            const svg = document.getElementById('barcode-svg');
+            if (!svg || !svg.children.length) return null;
+            const clone = svg.cloneNode(true);
+            clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+            if (!clone.getAttribute('viewBox')) {
+                const w = svg.getAttribute('width') || '200';
+                const h = svg.getAttribute('height') || '90';
+                clone.setAttribute('viewBox', `0 0 ${parseInt(w)} ${parseInt(h)}`);
+            }
+            return clone;
+        }
+
+        function downloadBarcodeSVG() {
+            const clone = getCurrentBarcodeSVG();
+            if (!clone) { showToast("Genera primero un EAN-13 valido", true); return; }
+            const xml = new XMLSerializer().serializeToString(clone);
+            const blob = new Blob([xml], { type: 'image/svg+xml;charset=utf-8' });
+            const ean = document.getElementById('full-ean-string').innerText.trim();
+            const zoe = `${activePrefix}-${document.getElementById('ident-number').value || 'XXXX'}${document.getElementById('char-suffix').value || 'XX'}`;
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${ean}_${zoe}.svg`;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast("SVG vectorial descargado");
+        }
+
+        function downloadBarcodePNG() {
+            const clone = getCurrentBarcodeSVG();
+            if (!clone) { showToast("Genera primero un EAN-13 valido", true); return; }
+            const xml = new XMLSerializer().serializeToString(clone);
+            const svg64 = btoa(unescape(encodeURIComponent(xml)));
+            const img = new Image();
+            img.onload = function() {
+                const scale = 2;
+                const w = (clone.getAttribute('width') || img.width || 200) * scale;
+                const h = (clone.getAttribute('height') || img.height || 90) * scale;
+                const canvas = document.createElement('canvas');
+                canvas.width = w; canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, w, h);
+                ctx.drawImage(img, 0, 0, w, h);
+                canvas.toBlob(function(blob) {
+                    if (!blob) { showToast("Error al generar PNG", true); return; }
+                    const ean = document.getElementById('full-ean-string').innerText.trim();
+                    const zoe = `${activePrefix}-${document.getElementById('ident-number').value || 'XXXX'}${document.getElementById('char-suffix').value || 'XX'}`;
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${ean}_${zoe}.png`;
+                    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    showToast("PNG 2x descargado");
+                }, 'image/png');
+            };
+            img.onerror = function() { showToast("Error al rasterizar el codigo", true); };
+            img.src = 'data:image/svg+xml;base64,' + svg64;
+        }
+
+        // =================================================================
+        // LÓGICA DE INVENTARIO: Validaciones y asignación de libres
+        // =================================================================
+
+        function updateInventoryCounters() {
+            const usados = INVENTORY.filter(x => x.estado === 'EN_USO').length;
+            const libres = INVENTORY.filter(x => x.estado === 'SIN_UTILIZAR').length - assignedInSession.size;
+            const counterLibres = document.getElementById('counter-libres');
+            if (counterLibres) counterLibres.textContent = Math.max(0, libres);
+        }
+
+        function validateIdent(input) {
+            input.value = input.value.replace(/[^0-9]/g, '');
+            const ident = input.value;
+            const fb = document.getElementById('ident-feedback');
+            if (ident.length === 0) { fb.classList.add('hidden'); updateZoeComboStatus(); return; }
+            fb.classList.remove('hidden');
+            if (ident.length < 4) {
+                fb.textContent = `Faltan ${4 - ident.length} dígito(s) numérico(s).`;
+                fb.className = 'text-[10px] mt-1 text-amber-400';
+            } else {
+                fb.textContent = 'Identificador de 4 dígitos listo.';
+                fb.className = 'text-[10px] mt-1 text-emerald-400';
+            }
+            updateZoeComboStatus();
+        }
+
+        function validateSuffix(input) {
+            input.value = input.value.replace(/[^a-zA-Z]/g, '').toUpperCase();
+            const suf = input.value;
+            const fb = document.getElementById('suffix-feedback');
+            if (suf.length === 0) { fb.classList.add('hidden'); updateZoeComboStatus(); return; }
+            fb.classList.remove('hidden');
+            if (suf.length < 2) {
+                fb.textContent = `Falta ${2 - suf.length} letra(s) (característica).`;
+                fb.className = 'text-[10px] mt-1 text-amber-400';
+            } else {
+                fb.textContent = 'Característica de 2 letras lista.';
+                fb.className = 'text-[10px] mt-1 text-emerald-400';
+            }
+            updateZoeComboStatus();
+        }
+
+        // Genera un identificador aleatorio de 4 digitos que NO exista
+        // ya en el inventario ni en la sesion, para el prefijo actual.
+        function generateRandomIdent() {
+            const input = document.getElementById('ident-number');
+            const btn = document.getElementById('btn-random-ident');
+            // Construir set de idents ya ocupados para el prefijo activo
+            const occupied = new Set();
+            INVENTORY.forEach(x => {
+                if (x.zce && x.zce.startsWith(activePrefix + '-')) {
+                    const m = x.zce.match(/-(\d{4})[A-Z]{2}$/);
+                    if (m) occupied.add(m[1]);
+                }
+            });
+            generatedCodes.forEach(x => {
+                if (x.prefix === activePrefix) occupied.add(x.ident);
+            });
+            // Intentar hasta 200 veces encontrar uno libre
+            let candidate = null;
+            for (let i = 0; i < 200; i++) {
+                const r = Math.floor(1000 + Math.random() * 9000).toString();
+                if (!occupied.has(r)) { candidate = r; break; }
+            }
+            if (!candidate) {
+                showToast("No quedan identificadores disponibles para " + activePrefix, true);
+                return;
+            }
+            input.value = candidate;
+            validateIdent(input);
+            // Efecto visual del dado
+            btn.classList.add('animate-spin');
+            setTimeout(() => btn.classList.remove('animate-spin'), 400);
+            showToast("Identificador aleatorio: " + candidate);
+        }
+
+        // Verifica la combinacion ZCE-XXXXYY / ZCA-XXXXYY en vivo
+        function updateZoeComboStatus() {
+            const box = document.getElementById('zoe-combo-status');
+            const ident = document.getElementById('ident-number').value;
+            const suffix = document.getElementById('char-suffix').value;
+            if (ident.length < 4 || suffix.length < 2) { box.classList.add('hidden'); return; }
+            const zoeCode = `${activePrefix}-${ident}${suffix}`;
+            box.classList.remove('hidden');
+            if (USED_ZOE_CODES.has(zoeCode)) {
+                // Buscar el BC vinculado en inventario
+                const match = INVENTORY.find(x => x.zce === zoeCode);
+                const bc = match ? match.bc : '—';
+                box.className = 'p-3 rounded-xl border text-xs font-mono flex items-center gap-2 bg-rose-500/10 border-rose-500/40 text-rose-300';
+                box.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> La nomenclatura <span class="font-bold mx-1">${zoeCode}</span> YA EXISTE (EAN-13 ${bc}). Usa otro identificador o característica.`;
+            } else if (generatedCodes.some(c => c.code === zoeCode)) {
+                box.className = 'p-3 rounded-xl border text-xs font-mono flex items-center gap-2 bg-amber-500/10 border-amber-500/40 text-amber-300';
+                box.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> La nomenclatura <span class="font-bold mx-1">${zoeCode}</span> ya está en el historial de esta sesión.`;
+            } else {
+                box.className = 'p-3 rounded-xl border text-xs font-mono flex items-center gap-2 bg-emerald-500/10 border-emerald-500/40 text-emerald-300';
+                box.innerHTML = `<i class="fa-solid fa-circle-check"></i> Nomenclatura <span class="font-bold mx-1">${zoeCode}</span> disponible. Asigna un código de barras libre para completar el registro.`;
+            }
+        }
+
+        // Devuelve el siguiente BC libre (estado SIN_UTILIZAR, no usado en sesión)
+        function getNextFreeBarcode() {
+            const libres = INVENTORY
+                .filter(x => x.estado === 'SIN_UTILIZAR' && !assignedInSession.has(x.bc))
+                .sort((a, b) => a.bc.localeCompare(b.bc));
+            return libres[0] || null;
+        }
+
+        // Asigna un código de barras libre al formulario actual
+        function assignFreeBarcode() {
+            const ident = document.getElementById('ident-number').value;
+            const suffix = document.getElementById('char-suffix').value;
+            const fb = document.getElementById('free-assign-feedback');
+            fb.classList.remove('hidden');
+
+            if (ident.length < 4) { fb.className = 'text-[11px] text-rose-400'; fb.innerHTML = '<i class="fa-solid fa-circle-xmark"></i> Primero define un identificador de 4 dígitos.'; return; }
+            if (suffix.length < 2) { fb.className = 'text-[11px] text-rose-400'; fb.innerHTML = '<i class="fa-solid fa-circle-xmark"></i> Primero define una característica de 2 letras.'; return; }
+
+            const free = getNextFreeBarcode();
+            if (!free) {
+                fb.className = 'text-[11px] text-rose-400';
+                fb.innerHTML = '<i class="fa-solid fa-circle-xmark"></i> No quedan códigos libres en el inventario embebido.';
+                return;
+            }
+
+            // Sobrescribe los campos EAN con el código libre (manteniendo checksum)
+            document.getElementById('ean-company').value = free.bc.substring(0, 7);
+            document.getElementById('ean-sequence').value = free.bc.substring(7, 12);
+            assignedInSession.add(free.bc);
+            fb.className = 'text-[11px] text-emerald-400';
+            fb.innerHTML = `<i class="fa-solid fa-circle-check"></i> Asignado <span class="font-bold">${free.bc}</span>${free.zce ? ' (anteriormente vinculado a ' + free.zce + ')' : ''}. Listo para registrar.`;
+            updateEANCalculations();
+            updateInventoryCounters();
+        }
+
+        // =================================================================
+        // MODAL DE INVENTARIO
+        // =================================================================
+
+        function openInventoryModal(initialFilter) {
+            document.getElementById('inventory-modal').classList.remove('opacity-0', 'pointer-events-none');
+            if (initialFilter === 'libres') document.getElementById('inv-prefix').value = 'LIBRE';
+            renderInventoryTable();
+        }
+
+        function closeInventoryModal() {
+            document.getElementById('inventory-modal').classList.add('opacity-0', 'pointer-events-none');
+        }
+
+        function renderInventoryTable() {
+            const search = (document.getElementById('inv-search').value || '').toLowerCase().trim();
+            const prefix = document.getElementById('inv-prefix').value;
+            const sort = document.getElementById('inv-sort').value;
+
+            let data = INVENTORY.slice();
+
+            // Filtros
+            if (prefix === 'LIBRE') data = data.filter(x => x.estado === 'SIN_UTILIZAR' && !assignedInSession.has(x.bc));
+            else if (prefix === 'USADO') data = data.filter(x => x.estado === 'EN_USO');
+            else if (prefix) data = data.filter(x => x.zce && x.zce.startsWith(prefix + '-'));
+
+            if (search) {
+                data = data.filter(x =>
+                    (x.bc && x.bc.includes(search)) ||
+                    (x.zce && x.zce.toLowerCase().includes(search)) ||
+                    (x.cat && x.cat.toLowerCase().includes(search)) ||
+                    (x.carpeta && x.carpeta.toLowerCase().includes(search))
+                );
+            }
+
+            // Ordenamiento
+            if (sort === 'bc-asc') data.sort((a, b) => a.bc.localeCompare(b.bc));
+            else if (sort === 'bc-desc') data.sort((a, b) => b.bc.localeCompare(a.bc));
+            else if (sort === 'zce-asc') data.sort((a, b) => (a.zce || 'ZZZ').localeCompare(b.zce || 'ZZZ'));
+            else if (sort === 'cat-asc') data.sort((a, b) => (a.cat || '').localeCompare(b.cat || ''));
+
+            // Render
+            const tbody = document.getElementById('inv-rows');
+            const empty = document.getElementById('inv-empty');
+            tbody.innerHTML = '';
+            if (data.length === 0) { empty.classList.remove('hidden'); }
+            else { empty.classList.add('hidden'); }
+
+            data.forEach(item => {
+                const isFree = item.estado === 'SIN_UTILIZAR' && !assignedInSession.has(item.bc);
+                const isAssignedNow = item.estado === 'SIN_UTILIZAR' && assignedInSession.has(item.bc);
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-800/50';
+                const estadoBadge = isFree
+                    ? '<span class="inline-flex items-center gap-1 text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full text-[10px] font-bold"><i class="fa-solid fa-circle"></i> LIBRE</span>'
+                    : isAssignedNow
+                        ? '<span class="inline-flex items-center gap-1 text-amber-300 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-full text-[10px] font-bold"><i class="fa-solid fa-circle-half-stroke"></i> EN SESIÓN</span>'
+                        : '<span class="inline-flex items-center gap-1 text-rose-300 bg-rose-500/10 border border-rose-500/30 px-2 py-0.5 rounded-full text-[10px] font-bold"><i class="fa-solid fa-link"></i> ASIGNADO</span>';
+                const accion = isFree
+                    ? `<button onclick="useFreeBarcode('${item.bc}')" class="px-2.5 py-1 bg-emerald-500/90 hover:bg-emerald-400 text-slate-950 rounded-md text-[10px] font-bold uppercase tracking-wider flex items-center gap-1"><i class="fa-solid fa-bolt"></i> Usar</button>`
+                    : isAssignedNow
+                        ? '<span class="text-[10px] text-slate-500 italic">Reservado</span>'
+                        : (item.zce ? `<button onclick="loadInventoryItem('${item.bc}')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-md text-[10px] font-bold uppercase tracking-wider flex items-center gap-1"><i class="fa-solid fa-eye"></i> Ver</button>` : '<span class="text-[10px] text-slate-500 italic">Sin nomenclatura</span>');
+                tr.innerHTML = `
+                    <td class="py-2 pr-3">${estadoBadge}</td>
+                    <td class="py-2 pr-3 font-mono font-bold text-teal-300 select-all">${item.bc}</td>
+                    <td class="py-2 pr-3 font-mono text-white">${item.zce || '<span class="text-slate-500">—</span>'}</td>
+                    <td class="py-2 pr-3 text-slate-400 text-xs">${item.cat || '—'}</td>
+                    <td class="py-2 pr-3 text-slate-500 text-xs truncate max-w-[180px]" title="${item.carpeta || ''}">${item.carpeta || '—'}</td>
+                    <td class="py-2 pr-3 text-center">${accion}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Contadores
+            document.getElementById('inv-counter-total').textContent = INVENTORY.length;
+            document.getElementById('inv-counter-usados').textContent = INVENTORY.filter(x => x.estado === 'EN_USO').length;
+            document.getElementById('inv-counter-libres').textContent = INVENTORY.filter(x => x.estado === 'SIN_UTILIZAR').length - assignedInSession.size;
+            document.getElementById('inv-counter-result').textContent = `${data.length} coincidencia(s) mostradas`;
+        }
+
+        // Carga un BC libre en el formulario desde el modal
+        function useFreeBarcode(bc) {
+            const item = INVENTORY.find(x => x.bc === bc);
+            if (!item) return;
+            document.getElementById('ean-company').value = bc.substring(0, 7);
+            document.getElementById('ean-sequence').value = bc.substring(7, 12);
+            assignedInSession.add(bc);
+            closeInventoryModal();
+            updateEANCalculations();
+            updateInventoryCounters();
+            const fb = document.getElementById('free-assign-feedback');
+            fb.classList.remove('hidden');
+            fb.className = 'text-[11px] text-emerald-400';
+            fb.innerHTML = `<i class="fa-solid fa-circle-check"></i> Cargado <span class="font-bold">${bc}</span> desde el modal de inventario.`;
+            showToast(`BC ${bc} cargado y reservado en sesión`);
+        }
+
+        // Carga los datos de un item en uso para visualizarlos en el formulario
+        function loadInventoryItem(bc) {
+            const item = INVENTORY.find(x => x.bc === bc);
+            if (!item || !item.zce) return;
+            closeInventoryModal();
+            // Extraer prefijo, ident, sufijo
+            const m = item.zce.match(/^([A-Z]+)-(\d{4})([A-Z]{2})$/);
+            if (!m) return;
+            activePrefix = m[1];
+            document.getElementById('ident-number').value = m[2];
+            document.getElementById('char-suffix').value = m[3];
+            document.getElementById('ean-company').value = bc.substring(0, 7);
+            document.getElementById('ean-sequence').value = bc.substring(7, 12);
+            // Actualizar estilos de los botones de prefijo
+            document.querySelectorAll('.prefix-btn').forEach(btn => {
+                btn.classList.remove('border-teal-500/40', 'ring-1', 'ring-teal-500/20');
+                const title = btn.querySelector('div');
+                if (title) title.className = "font-bold text-slate-300 text-lg";
+            });
+            const activeBtn = document.getElementById(`btn-pre-${activePrefix}`);
+            if (activeBtn) {
+                activeBtn.classList.add('border-teal-500/40', 'ring-1', 'ring-teal-500/20');
+                const title = activeBtn.querySelector('div');
+                if (title) title.className = "font-bold text-teal-400 text-lg";
+            }
+            validateIdent(document.getElementById('ident-number'));
+            validateSuffix(document.getElementById('char-suffix'));
+            updateEANCalculations();
+            showToast(`${item.zce} (${bc}) cargado en el visor`);
+        }
+
+        // FÓRMULA MATEMÁTICA: Dígito Verificador EAN-13 (Ponderación 1 y 3)
+        function calculateEan13CheckDigit(base12) {
+            if (base12.length !== 12 || !/^\d+$/.test(base12)) return null;
+            let sum = 0;
+            for (let i = 0; i < 12; i++) {
+                let digit = parseInt(base12[i]);
+                // Las posiciones impares (multiplicadas por 1) y las pares (por 3)
+                if (i % 2 === 0) {
+                    sum += digit * 1;
+                } else {
+                    sum += digit * 3;
+                }
+            }
+            let remainder = sum % 10;
+            return remainder === 0 ? 0 : 10 - remainder;
+        }
+
+        // Actualizar cálculos EAN y renders
+        function updateEANCalculations() {
+            const company = document.getElementById('ean-company').value || '7451304';
+            let seq = document.getElementById('ean-sequence').value || '00000';
+            
+            // Completar secuencial con ceros a la izquierda para garantizar los 5 dígitos
+            while (seq.length < 5) {
+                seq = '0' + seq;
+            }
+
+            const base12 = (company + seq).substring(0, 12);
+            const checkDigit = calculateEan13CheckDigit(base12);
+            
+            const fullEan = base12 + (checkDigit !== null ? checkDigit : '0');
+            
+            document.getElementById('ean-checkdigit').innerText = checkDigit !== null ? checkDigit : '-';
+            document.getElementById('full-ean-string').innerText = fullEan;
+
+            // Nomenclatura del Código de Producto ZOE
+            const ident = document.getElementById('ident-number').value || 'XXXX';
+            const suffix = document.getElementById('char-suffix').value || 'XX';
+            const finalZoeCode = `${activePrefix}-${ident}${suffix}`;
+
+            document.getElementById('preview-text-code').innerText = finalZoeCode;
+            document.getElementById('label-code-str').innerText = finalZoeCode;
+
+            // Metadatos de la etiqueta
+            const desc = document.getElementById('prod-desc').value || 'TOPE DE PUERTA';
+            const color = document.getElementById('prod-color').value || 'Satin nickel';
+            const size = document.getElementById('prod-size').value || '60 MM';
+
+            document.getElementById('label-title').innerText = desc;
+            document.getElementById('label-color').innerText = color;
+            document.getElementById('label-size').innerText = size;
+
+            // Renderizado de códigos de barras EAN-13 utilizando JsBarcode
+            if (fullEan.length === 13) {
+                try {
+                    // Altura configurable desde el slider (default 90)
+                    const slider = document.getElementById('barcode-height');
+                    const heightVal = slider ? parseInt(slider.value) || 90 : 90;
+                    const heightLabel = document.getElementById('barcode-height-label');
+                    if (heightLabel) heightLabel.textContent = heightVal;
+
+                    // Barcode de pantalla principal
+                    JsBarcode("#barcode-svg", fullEan, {
+                        format: "EAN13",
+                        lineColor: "#0f172a",
+                        width: 2.2,
+                        height: heightVal,
+                        displayValue: true,
+                        fontSize: 14,
+                        background: "#ffffff",
+                        margin: 6
+                    });
+
+                    // Barcode de etiqueta de impresión (mas pequeno y proporcionado)
+                    JsBarcode("#barcode-label-svg", fullEan, {
+                        format: "EAN13",
+                        lineColor: "#000000",
+                        width: 2,
+                        height: Math.max(40, Math.round(heightVal * 0.7)),
+                        displayValue: true,
+                        fontSize: 12,
+                        background: "#ffffff",
+                        margin: 4
+                    });
+                } catch (e) {
+                    console.log("EAN incompleto para dibujo", e);
+                }
+            }
+        }
+
+        // Listeners
+        document.getElementById('prod-desc').addEventListener('input', updateEANCalculations);
+        document.getElementById('prod-color').addEventListener('input', updateEANCalculations);
+        document.getElementById('prod-size').addEventListener('input', updateEANCalculations);
+
+        // Función para copiar datos al portapapeles
+        function copyToClipboard(type) {
+            let targetText = '';
+            if (type === 'code') {
+                const ident = document.getElementById('ident-number').value || 'XXXX';
+                const suffix = document.getElementById('char-suffix').value || 'XX';
+                targetText = `${activePrefix}-${ident}${suffix}`;
+            } else {
+                targetText = document.getElementById('full-ean-string').innerText.trim();
+            }
+
+            const tempInput = document.createElement("input");
+            tempInput.value = targetText;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand("copy");
+            document.body.removeChild(tempInput);
+
+            showToast(`¡Copiado: ${targetText}!`);
+        }
+
+        // Registrar código nuevo en la tabla historial
+        function addCodeToHistory() {
+            const ident = document.getElementById('ident-number').value;
+            const suffix = document.getElementById('char-suffix').value;
+            const eanSeq = document.getElementById('ean-sequence').value;
+
+            if (!ident || ident.length < 4) {
+                showToast("Por favor, introduce un identificador de 4 dígitos", true);
+                return;
+            }
+            if (!suffix || suffix.length < 2) {
+                showToast("Por favor, introduce una característica de 2 letras", true);
+                return;
+            }
+            if (!eanSeq || eanSeq.length < 2) {
+                showToast("Por favor, introduce una secuencia EAN válida", true);
+                return;
+            }
+
+            const finalZoeCode = `${activePrefix}-${ident}${suffix}`;
+            const fullEan = document.getElementById('full-ean-string').innerText.trim();
+            const desc = document.getElementById('prod-desc').value || 'Sin descripción';
+            const color = document.getElementById('prod-color').value || '-';
+            const size = document.getElementById('prod-size').value || '-';
+
+            // Validación contra el inventario: nomenclatura ya registrada
+            if (USED_ZOE_CODES.has(finalZoeCode)) {
+                const linked = INVENTORY.find(x => x.zce === finalZoeCode);
+                showToast(`La nomenclatura ${finalZoeCode} ya está registrada en el inventario (EAN ${linked ? linked.bc : '—'})`, true);
+                return;
+            }
+            // Validación contra el inventario: EAN-13 ya usado
+            if (USED_BARCODES.has(fullEan) && !assignedInSession.has(fullEan)) {
+                const linked = INVENTORY.find(x => x.bc === fullEan);
+                showToast(`El EAN-13 ${fullEan} ya está en uso (vinculado a ${linked ? linked.zce || 'sin nomenclatura' : '—'})`, true);
+                return;
+            }
+            // Evitar duplicados en la sesion
+            if (generatedCodes.some(c => c.code === finalZoeCode || c.ean === fullEan)) {
+                showToast("Este modelo o EAN-13 ya existe en el historial de la sesión", true);
+                return;
+            }
+
+            generatedCodes.unshift({
+                code: finalZoeCode,
+                ean: fullEan,
+                prefix: activePrefix,
+                ident: ident,
+                suffix: suffix,
+                desc: desc,
+                color: color,
+                size: size,
+                sizeMode: (document.getElementById('prod-size').dataset.mode || 'size'),
+                sizeLabel: (SIZE_MODES[document.getElementById('prod-size').dataset.mode || 'size'] || SIZE_MODES.size).printTitle.replace(/:$/, '')
+            });
+
+            renderHistory();
+            // Persistir la asignacion en los set de inventario para que futuras validaciones lo reconozcan
+            USED_BARCODES.add(fullEan);
+            USED_ZOE_CODES.add(finalZoeCode);
+            assignedInSession.delete(fullEan);
+            updateInventoryCounters();
+            showToast("Artículo y EAN-13 registrado con éxito");
+            
+            // Auto incrementar secuencial EAN para comodidad del usuario
+            let nextSeq = parseInt(eanSeq) + 1;
+            document.getElementById('ean-sequence').value = nextSeq.toString();
+            
+            // Generar nuevo identificador aleatorio de 4 dígitos libre para agilizar la entrada
+            generateRandomIdent();
+            updateEANCalculations();
+        }
+
+        // Generar lote correlativo masivo
+        function generateBatch() {
+            const zoePrefix = document.getElementById('batch-prefix').value;
+            const suffix = document.getElementById('batch-suffix').value.toUpperCase();
+            const startEanSeq = parseInt(document.getElementById('batch-ean-start').value);
+            const startZoeIdent = parseInt(document.getElementById('batch-ident-start').value);
+            const qty = parseInt(document.getElementById('batch-qty').value);
+            const company = "7451304"; // Prefijo estándar corporativo ZOE
+
+            if (isNaN(startEanSeq) || startEanSeq < 0 || startEanSeq > 99999) {
+                showToast("Rango de secuencial EAN inválido (0 - 99999)", true);
+                return;
+            }
+            if (isNaN(startZoeIdent) || startZoeIdent < 1000 || startZoeIdent > 9999) {
+                showToast("El identificador ZOE inicial debe tener 4 dígitos", true);
+                return;
+            }
+            if (isNaN(qty) || qty < 1 || qty > 100) {
+                showToast("Cantidad fuera de rango (1-100)", true);
+                return;
+            }
+
+            let creados = 0;
+            for (let i = 0; i < qty; i++) {
+                const curZoeIdent = startZoeIdent + i;
+                if (curZoeIdent > 9999) break;
+
+                const curEanSeqNum = startEanSeq + i;
+                let curEanSeqStr = curEanSeqNum.toString();
+                while (curEanSeqStr.length < 5) {
+                    curEanSeqStr = '0' + curEanSeqStr;
+                }
+
+                const base12 = company + curEanSeqStr;
+                const checkDigit = calculateEan13CheckDigit(base12);
+                const fullEan = base12 + checkDigit;
+
+                const zoeCode = `${zoePrefix}-${curZoeIdent}${suffix}`;
+
+                // Saltar si la nomenclatura o el EAN ya estan en el inventario, en sesion o reservados
+                const zoeTaken = USED_ZOE_CODES.has(zoeCode) || generatedCodes.some(c => c.code === zoeCode);
+                const eanTaken = USED_BARCODES.has(fullEan) || assignedInSession.has(fullEan) || generatedCodes.some(c => c.ean === fullEan);
+                if (zoeTaken || eanTaken) continue;
+
+                generatedCodes.unshift({
+                    code: zoeCode,
+                    ean: fullEan,
+                    prefix: zoePrefix,
+                    ident: curZoeIdent.toString(),
+                    suffix: suffix,
+                    desc: `LOTE GENERADO MASIVO`,
+                    color: '-',
+                    size: '-'
+                });
+                USED_BARCODES.add(fullEan);
+                USED_ZOE_CODES.add(zoeCode);
+                creados++;
+            }
+
+            renderHistory();
+            updateInventoryCounters();
+            showToast(`¡Lote finalizado! Se crearon ${creados} códigos.`);
+            switchTab('individual');
+        }
+
+        // Renderizar tabla en pantalla
+        function renderHistory() {
+            const tbody = document.getElementById('history-rows');
+            const totalCounter = document.getElementById('counter-total');
+            tbody.innerHTML = '';
+
+            if (generatedCodes.length === 0) {
+                tbody.innerHTML = `
+                    <tr id="empty-state">
+                        <td colspan="10" class="text-center py-12 text-slate-500">
+                            <i class="fa-solid fa-barcode text-4xl mb-3 block opacity-40"></i>
+                            No hay códigos registrados. Genera uno nuevo arriba.
+                        </td>
+                    </tr>
+                `;
+                totalCounter.innerText = "Total: 0 Artículos";
+                return;
+            }
+
+            generatedCodes.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-900/60 transition-colors border-b border-slate-800/50";
+                const modeBadge = {
+                    size: '<span class="inline-flex items-center gap-1 text-slate-300 text-[10px] font-bold uppercase tracking-wider"><i class="fa-solid fa-ruler text-slate-500"></i> Medida</span>',
+                    uso:  '<span class="inline-flex items-center gap-1 text-cyan-300 text-[10px] font-bold uppercase tracking-wider"><i class="fa-solid fa-door-open text-cyan-500/70"></i> Uso</span>',
+                    otro: '<span class="inline-flex items-center gap-1 text-amber-300 text-[10px] font-bold uppercase tracking-wider"><i class="fa-solid fa-pen text-amber-500/70"></i> ' + (item.sizeLabel || 'Otro') + '</span>'
+                }[item.sizeMode || 'size'];
+                tr.innerHTML = `
+                    <td class="px-6 py-3 font-mono font-bold text-white select-all">${item.code}</td>
+                    <td class="px-6 py-3 font-mono font-bold text-teal-400 select-all">${item.ean}</td>
+                    <td class="px-6 py-3 text-slate-400 font-mono text-center">${item.prefix}</td>
+                    <td class="px-6 py-3 text-slate-400 font-mono text-center">${item.ident}</td>
+                    <td class="px-6 py-3 text-slate-400 font-mono text-center">${item.suffix}</td>
+                    <td class="px-6 py-3 text-white font-medium max-w-xs truncate" title="${item.desc}">${item.desc}</td>
+                    <td class="px-6 py-3 text-slate-300">${item.color}</td>
+                    <td class="px-6 py-3 text-slate-300">${modeBadge}</td>
+                    <td class="px-6 py-3 text-slate-300">${item.size}</td>
+                    <td class="px-6 py-3 text-center">
+                        <div class="flex items-center gap-2 justify-center">
+                            <button onclick="loadToPreview(${index})" class="p-1.5 hover:bg-slate-800 text-teal-400 rounded transition-colors" title="Visualizar Etiqueta">
+                                <i class="fa-regular fa-eye"></i>
+                            </button>
+                            <button onclick="deleteRow(${index})" class="p-1.5 hover:bg-slate-800 text-rose-400 rounded transition-colors" title="Eliminar de Tabla">
+                                <i class="fa-regular fa-trash-can"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            totalCounter.innerText = `Total: ${generatedCodes.length} Artículos`;
+        }
+
+        // Cargar del historial para visualizar/imprimir
+        function loadToPreview(index) {
+            const item = generatedCodes[index];
+            activePrefix = item.prefix;
+            
+            document.getElementById('ident-number').value = item.ident;
+            document.getElementById('char-suffix').value = item.suffix;
+            document.getElementById('prod-desc').value = item.desc === 'LOTE GENERADO MASIVO' ? '' : item.desc;
+            document.getElementById('prod-color').value = item.color === '-' ? '' : item.color;
+            document.getElementById('prod-size').value = item.size === '-' ? '' : item.size;
+            if (item.sizeMode) {
+                document.getElementById('prod-size-mode').value = item.sizeMode;
+                updateSizeMode(item.sizeMode);
+            }
+
+            // Extraer componentes del EAN-13
+            if (item.ean.length === 13) {
+                document.getElementById('ean-company').value = item.ean.substring(0, 7);
+                document.getElementById('ean-sequence').value = item.ean.substring(7, 12);
+            }
+
+            // Cambiar estilos de los botones de prefijo
+            document.querySelectorAll('.prefix-btn').forEach(btn => {
+                btn.classList.remove('border-teal-500/40', 'ring-1', 'ring-teal-500/20');
+                const title = btn.querySelector('div');
+                if (title) title.className = "font-bold text-slate-300 text-lg";
+            });
+            const activeBtn = document.getElementById(`btn-pre-${item.prefix}`);
+            if (activeBtn) {
+                activeBtn.classList.add('border-teal-500/40', 'ring-1', 'ring-teal-500/20');
+                const title = activeBtn.querySelector('div');
+                if (title) title.className = "font-bold text-teal-400 text-lg";
+            }
+
+            updateEANCalculations();
+            updateZoeComboStatus();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            showToast("Código cargado en el visor");
+        }
+
+        // Eliminar del historial
+        function deleteRow(index) {
+            generatedCodes.splice(index, 1);
+            renderHistory();
+            showToast("Registro eliminado de la sesión");
+        }
+
+        function clearHistory() {
+            // Quitar de los sets los EANs/ZOEs que solo estaban en sesion
+            generatedCodes.forEach(c => {
+                USED_BARCODES.delete(c.ean);
+                USED_ZOE_CODES.delete(c.code);
+            });
+            generatedCodes = [];
+            renderHistory();
+            updateInventoryCounters();
+            showToast("Tabla de historial vaciada");
+        }
+
+        function resetForm() {
+            document.getElementById('ident-number').value = '';
+            document.getElementById('char-suffix').value = '';
+            document.getElementById('ean-sequence').value = '';
+            document.getElementById('prod-desc').value = '';
+            document.getElementById('prod-color').value = '';
+            document.getElementById('prod-size').value = '';
+            document.getElementById('ident-feedback').classList.add('hidden');
+            document.getElementById('suffix-feedback').classList.add('hidden');
+            document.getElementById('zoe-combo-status').classList.add('hidden');
+            document.getElementById('free-assign-feedback').classList.add('hidden');
+            updateEANCalculations();
+            showToast("Campos restaurados");
+        }
+
+        // Exportar a Excel (CSV)
+        function exportToCSV() {
+            if (generatedCodes.length === 0) {
+                showToast("No hay registros en la tabla para exportar", true);
+                return;
+            }
+
+            // Encabezados con las columnas exactas que se observan en tus Excel (Código ZOE, Identificador, Características, Sugerido, Barras, etc.)
+            let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+            csvContent += "CODIGO ZOE,N° ident,Caracteristica,CODIGO SUGERIDO,Codigo de Barras,Descripcion de Producto,COLOR/ACABADO,Variable,Medida/Uso\r\n";
+
+            generatedCodes.forEach(row => {
+                const descEscaped = `"${row.desc.replace(/"/g, '""')}"`;
+                const modeLabel = ({ size: 'Medida', uso: 'Tipo de uso', otro: row.sizeLabel || 'Personalizado' })[row.sizeMode || 'size'];
+                const line = `${row.prefix},${row.ident},${row.suffix},${row.code},${row.ean},${descEscaped},${row.color},${modeLabel},${row.size}`;
+                csvContent += line + "\r\n";
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `ZOE_EAN13_IMPORTACION_${new Date().toISOString().slice(0, 10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast("CSV descargado. Listo para abrir con Excel");
+        }
+
+        function printLabel() {
+            window.print();
+        }
+
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            const msgSpan = document.getElementById('toast-message');
+            
+            msgSpan.innerText = message;
+            if (isError) {
+                toast.classList.remove('bg-teal-500', 'text-slate-950');
+                toast.classList.add('bg-rose-500', 'text-white');
+            } else {
+                toast.classList.remove('bg-rose-500', 'text-white');
+                toast.classList.add('bg-teal-500', 'text-slate-950');
+            }
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        // =================================================================
+        // BUSCADOR DE EMPAQUES / DISEÑOS (Jason Manillas Sep2024)
+        // =================================================================
+        let EMPAQUE_CATALOG = [];
+
+        async function loadEmpaqueCatalog() {
+            try {
+                const resp = await fetch('catalogo-empaques.json?t=' + Date.now());
+                if (resp.ok) {
+                    EMPAQUE_CATALOG = await resp.json();
+                }
+            } catch (e) {
+                console.warn('No se pudo cargar catalogo-empaques.json, usando datos embebidos');
+                EMPAQUE_CATALOG = EMPAQUE_CATALOG_FALLBACK;
+            }
+        }
+
+        // Fallback embebido por si falla la carga del JSON
+        const EMPAQUE_CATALOG_FALLBACK = [
+            {num:1,zce:"ZCE-9174AA",nombre:"MANILLA FIJA-MOVIL",material:"ACERO INOX",forma:"ROSETA REDONDA",color:"NEGRA",ciudad:"OSAKA",tiene_sub_empaque:true,archivos_raiz:[".ai",".pdf",".jpg"],archivos_masterpack:[".ai",".pdf"]},
+            {num:2,zce:"ZCE-7615AB",nombre:"MANILLA FIJA-MOVIL",material:"ACERO INOX",forma:"ROSETA REDONDA",color:"NEGRA",ciudad:"NÁPOLES",tiene_sub_empaque:true,archivos_raiz:[".ai",".pdf",".jpg"],archivos_masterpack:[".ai",".pdf"]},
+            {num:4,zce:"ZCE-4466AC",nombre:"MANILLA FIJA-MOVIL",material:"NEGRA",forma:"PLACA OVALADA",color:"NEGRA",ciudad:"BRUSELAS",tiene_sub_empaque:true,archivos_raiz:[".ai",".pdf",".jpg"],archivos_masterpack:[".ai",".pdf"]},
+            {num:5,zce:"ZCE-8234AD",nombre:"MANILLA FIJA-MOVIL",material:"BLANCA",forma:"PLACA OVALADA",color:"BLANCA",ciudad:"CAIRO",tiene_sub_empaque:true,archivos_raiz:[".ai",".pdf",".jpg"],archivos_masterpack:[".ai",".pdf"]},
+            {num:6,zce:"ZCE-3199AE",nombre:"MANILLA FIJA-MOVIL",material:"ACERO INOXIDABLE",forma:"ROSETA OVALADA",color:"ACERO",ciudad:"BRASILIA",tiene_sub_empaque:true,archivos_raiz:[".ai",".pdf",".jpg"],archivos_masterpack:[".ai",".pdf"]},
+            {num:7,zce:"ZCE-7487AF",nombre:"MANILLA FIJA-MOVIL",material:"ACERO INOXIDABLE",forma:"ROSETA REDONDA",color:"ACERO",ciudad:"PEKÍN",tiene_sub_empaque:true,archivos_raiz:[".ai",".pdf",".jpg"],archivos_masterpack:[".ai",".pdf"]},
+            {num:8,zce:"ZCE-4161AG",nombre:"MANILLA FIJA-MOVIL",material:"BLANCA",forma:"ROSETA REDONDA",color:"BLANCA",ciudad:"TIBET",tiene_sub_empaque:true,archivos_raiz:[".ai",".pdf",".jpg"],archivos_masterpack:[".ai",".pdf"]},
+            {num:9,zce:"ZCE-2289AH",nombre:"MANILLA FIJA-MOVIL",material:"ACERO INOXIDABLE",forma:"ROSETA CUADRADA",color:"ACERO",ciudad:"HABANA",tiene_sub_empaque:true,archivos_raiz:[".ai",".pdf",".jpg"],archivos_masterpack:[".ai",".pdf"]},
+            {num:10,zce:"ZCE-2235AI",nombre:"MANILLA FIJA-MOVIL",material:"NEGRA",forma:"ROSETA CUADRADA",color:"NEGRA",ciudad:"PARIS",tiene_sub_empaque:true,archivos_raiz:[".ai",".pdf",".jpg"],archivos_masterpack:[".ai",".pdf"]},
+            {num:11,zce:"ZCE-9588AJ",nombre:"MANILLA FIJA-MOVIL",material:"ACERO INOXIDABLE",forma:"ROSETA CUADRADA",color:"ACERO",ciudad:"ATENAS",tiene_sub_empaque:true,archivos_raiz:[".ai",".pdf",".jpg"],archivos_masterpack:[".ai",".pdf"]},
+            {num:12,zce:"ZCE-8481AK",nombre:"MANILLA FIJA-MOVIL",material:"NEGRA",forma:"ROSETA CUADRADA",color:"NEGRA",ciudad:"BEIRUT",tiene_sub_empaque:true,archivos_raiz:[".ai",".pdf",".jpg"],archivos_masterpack:[".ai",".pdf"]},
+            {num:13,zce:"ZCE-9563AL",nombre:"MANILLA FIJA-MOVIL",material:"BLANCA",forma:"ROSETA CUADRADA",color:"BLANCA",ciudad:"LISBOA",tiene_sub_empaque:true,archivos_raiz:[".ai",".pdf",".jpg"],archivos_masterpack:[".ai",".pdf"]},
+            {num:14,zce:"ZCE-4923AM",nombre:"MANILLA FIJA-MOVIL",material:"ACERO INOXIDABLE",forma:"ROSETA REDONDA",color:"ACERO",ciudad:"TRIPOLI",tiene_sub_empaque:true,archivos_raiz:[".ai",".pdf",".jpg"],archivos_masterpack:[".ai",".pdf"]},
+            {num:15,zce:"ZCE-8542AN",nombre:"MANILLA FIJA",material:"ACERO INOXIDABLE",forma:"SIN ROSETA",color:"ACERO",ciudad:"LONDRES",tamaño:"20CM",tiene_sub_empaque:false,archivos_raiz:[".ai",".pdf",".jpg"],archivos_masterpack:[".ai",".pdf"]},
+            {num:16,zce:"ZCE-5796AO",nombre:"MANILLA FIJA",material:"NEGRA",forma:"SIN ROSETA",color:"NEGRA",ciudad:"BUDAPEST",tamaño:"20CM",tiene_sub_empaque:false,archivos_raiz:[".ai",".pdf",".jpg"],archivos_masterpack:[".ai",".pdf"]},
+            {num:17,zce:"ZCE-9256AP",nombre:"MANILLA FIJA",material:"ACERO INOXIDABLE",forma:"SIN ROSETA",color:"ACERO",ciudad:"DELHI",tamaño:"25CM",tiene_sub_empaque:false,archivos_raiz:[".ai",".pdf",".jpg"],archivos_masterpack:[".ai",".pdf"]},
+            {num:18,zce:"ZCE-2717AQ",nombre:"MANILLA FIJA",material:"NEGRA",forma:"SIN ROSETA",color:"NEGRA",ciudad:"OTTAWA",tamaño:"25CM",tiene_sub_empaque:false,archivos_raiz:[".ai",".pdf",".jpg"],archivos_masterpack:[".ai",".pdf"]},
+            {num:21,zce:"ZCE-7234AR",nombre:"MANILLA FIJA-MOVIL",material:"NEGRA",forma:"ROSETA CUADRADA",color:"NEGRA",ciudad:"MINSK",tiene_sub_empaque:true,archivos_raiz:[".ai",".pdf",".jpg"],archivos_masterpack:[".ai",".pdf"]},
+            {num:23,zce:"ZCE-6952AS",nombre:"MANILLA FIJA-MOVIL",material:"NEGRA",forma:"PLACA CUADRADA",color:"NEGRA",ciudad:"VARSOVIA",tiene_sub_empaque:true,archivos_raiz:[".ai",".pdf",".jpg"],archivos_masterpack:[".ai",".pdf"]},
+            {num:24,zce:"ZCE-9372AT",nombre:"MANILLA FIJA-MOVIL",material:"BLANCA",forma:"PLACA CUADRADA",color:"BLANCA",ciudad:"SOFÍA",tiene_sub_empaque:true,archivos_raiz:[".ai",".pdf",".jpg"],archivos_masterpack:[".ai",".pdf"]},
+            {num:25,zce:"ZCE-8783AU",nombre:"MANILLA FIJA-MOVIL",material:"ACERO INOX",forma:"ROSETA REDONDA",color:"ACERO",ciudad:"DOHA",tiene_sub_empaque:true,archivos_raiz:[".ai",".pdf",".jpg"],archivos_masterpack:[".ai",".pdf"]},
+            {num:26,zce:"ZCE-5145AV",nombre:"MANILLA FIJA-MOVIL",material:"ACERO NEGRO",forma:"ROSETA REDONDA",color:"NEGRA",ciudad:"BOGOTÁ",tiene_sub_empaque:true,archivos_raiz:[".ai",".pdf",".jpg"],archivos_masterpack:[".ai",".pdf"]},
+            {num:27,zce:"ZCE-5432AW",nombre:"MANILLA FIJA-MOVIL",material:"ACERO INOX",forma:"ROSETA REDONDA",color:"ACERO",ciudad:"MANILA",tiene_sub_empaque:true,archivos_raiz:[".ai",".pdf",".jpg"],archivos_masterpack:[".ai",".pdf"]},
+            {num:28,zce:"ZCE-4358AX",nombre:"MANILLA FIJA-MOVIL",material:"ACERO NEGRO",forma:"ROSETA REDONDA",color:"NEGRA",ciudad:"YAKARTA",tiene_sub_empaque:true,archivos_raiz:[".ai",".pdf",".jpg"],archivos_masterpack:[".ai",".pdf"]},
+            {num:29,zce:"ZCE-7211AY",nombre:"MANILLA FIJA-MOVIL",material:"ACERO INOX",forma:"ROSETA CUADRADA",color:"ACERO",ciudad:"KUALA LUMPUR",tiene_sub_empaque:true,archivos_raiz:[".ai",".pdf",".jpg"],archivos_masterpack:[".ai",".pdf"]},
+            {num:30,zce:"ZCE-1533AZ",nombre:"MANILLA FIJA-MOVIL",material:"ACERO NEGRO",forma:"ROSETA CUADRADA",color:"NEGRA",ciudad:"MALÁ",tiene_sub_empaque:true,archivos_raiz:[".ai",".pdf",".jpg"],archivos_masterpack:[".ai",".pdf"]},
+            {num:31,zce:"ZCE-4259BA",nombre:"CERRADURA REDONDA",material:"ACERO INOX",forma:"REDONDA",color:"ACERO",ciudad:"LIMA",tiene_sub_empaque:false,archivos_raiz:[".ai",".pdf",".jpg"],archivos_masterpack:[".ai",".pdf"]},
+            {num:32,zce:"ZCE-9843BB",nombre:"CERRADURA REDONDA",material:"NEGRA",forma:"REDONDA",color:"NEGRA",ciudad:"SANTIAGO",tiene_sub_empaque:false,archivos_raiz:[".ai",".pdf",".jpg"],archivos_masterpack:[".ai",".pdf"]},
+            {num:33,zce:"ZCE-8561BC",nombre:"CERRADURA REDONDA",material:"ACERO INOX",forma:"REDONDA",color:"ACERO",ciudad:"KINGSTON",extras:"INDICADOR OCUP-DISP",tiene_sub_empaque:false,archivos_raiz:[".ai",".pdf",".jpg"],archivos_masterpack:[".ai",".pdf"]},
+            {num:34,zce:"ZCE-7658BD",nombre:"CERRADURA REDONDA",material:"NEGRA",forma:"REDONDA",color:"NEGRA",ciudad:"NAIROBI",extras:"INDICADOR OCUP-DISP",tiene_sub_empaque:false,archivos_raiz:[".ai",".pdf",".jpg"],archivos_masterpack:[".ai",".pdf"]},
+            {num:35,zce:"ZCE-5222BE",nombre:"MANILLA FIJA",material:"ACERO INOX",forma:"PLACA CUADRADA",color:"ACERO",ciudad:"ASUNCIÓN",tiene_sub_empaque:true,archivos_raiz:[".ai",".pdf",".jpg","V2.ai"],archivos_masterpack:[".ai",".pdf"]},
+            {num:36,zce:"ZCE-8411BF",nombre:"MANILLA FIJA-MOVIL",material:"ACERO INOX",forma:"PLACA CUADRADA",color:"ACERO",ciudad:"BELGRADO",tiene_sub_empaque:true,archivos_raiz:[".ai",".pdf",".jpg"],archivos_masterpack:[".ai",".pdf"]}
+        ];
+
+        function openEmpaqueSearchModal() {
+            if (EMPAQUE_CATALOG.length === 0) EMPAQUE_CATALOG = EMPAQUE_CATALOG_FALLBACK;
+            document.getElementById('empaque-modal').classList.remove('opacity-0', 'pointer-events-none');
+            renderEmpaqueTable();
+        }
+
+        function closeEmpaqueSearchModal() {
+            document.getElementById('empaque-modal').classList.add('opacity-0', 'pointer-events-none');
+        }
+
+        function renderEmpaqueTable() {
+            const search = (document.getElementById('emp-search').value || '').toLowerCase().trim();
+            const tipo = document.getElementById('emp-tipo').value;
+            const nivel = document.getElementById('emp-nivel').value;
+            const material = document.getElementById('emp-material').value;
+            const forma = document.getElementById('emp-forma').value;
+
+            let data = EMPAQUE_CATALOG.slice();
+
+            // Filtro por tipo
+            if (tipo === 'MANILLA') data = data.filter(x => x.nombre && x.nombre.includes('MANILLA'));
+            else if (tipo === 'CERRADURA') data = data.filter(x => x.nombre && x.nombre.includes('CERRADURA'));
+            else if (tipo === 'MASTER') data = data.filter(x => x.nombre && x.nombre.includes('MASTER'));
+
+            // Filtro por nivel de empaque
+            if (nivel === 'CON_SUB') data = data.filter(x => x.tiene_sub_empaque === true);
+            else if (nivel === 'SIN_SUB') data = data.filter(x => x.tiene_sub_empaque === false && x.nombre && !x.nombre.includes('MASTER'));
+            else if (nivel === 'SOLO_MASTER') data = data.filter(x => x.nombre && x.nombre.includes('MASTER'));
+
+            // Filtro por material
+            if (material) {
+                data = data.filter(x => {
+                    const mat = (x.material || '').toUpperCase();
+                    const col = (x.color || '').toUpperCase();
+                    if (material === 'ACERO') return mat.includes('ACERO') || col === 'ACERO';
+                    if (material === 'NEGRA') return mat.includes('NEGRA') || col === 'NEGRA';
+                    if (material === 'BLANCA') return mat.includes('BLANCA') || col === 'BLANCA';
+                    return true;
+                });
+            }
+
+            // Filtro por forma
+            if (forma) {
+                data = data.filter(x => {
+                    const f = (x.forma || '').toUpperCase();
+                    if (forma === 'PLACA') return f.includes('PLACA');
+                    return f.includes(forma);
+                });
+            }
+
+            // Búsqueda libre
+            if (search) {
+                data = data.filter(x => {
+                    const haystack = [
+                        x.zce, x.nombre, x.material, x.forma, x.color,
+                        x.ciudad, x.extras, x.tamaño,
+                        (x.archivos_raiz || []).join(' '), (x.archivos_masterpack || []).join(' ')
+                    ].join(' ').toLowerCase();
+                    return haystack.includes(search);
+                });
+            }
+
+            // Render
+            const tbody = document.getElementById('emp-rows');
+            const empty = document.getElementById('emp-empty');
+            tbody.innerHTML = '';
+            if (data.length === 0) { empty.classList.remove('hidden'); }
+            else { empty.classList.add('hidden'); }
+
+            data.forEach(item => {
+                const isMaster = item.nombre && item.nombre.includes('MASTER');
+                const isCerradura = item.nombre && item.nombre.includes('CERRADURA');
+
+                const tipoBadge = isCerradura
+                    ? '<span class="inline-flex items-center gap-1 text-rose-300 bg-rose-500/10 border border-rose-500/30 px-2 py-0.5 rounded-full text-[10px] font-bold"><i class="fa-solid fa-lock"></i> CERRADURA</span>'
+                    : isMaster
+                        ? '<span class="inline-flex items-center gap-1 text-purple-300 bg-purple-500/10 border border-purple-500/30 px-2 py-0.5 rounded-full text-[10px] font-bold"><i class="fa-solid fa-box"></i> MASTER</span>'
+                        : '<span class="inline-flex items-center gap-1 text-teal-300 bg-teal-500/10 border border-teal-500/30 px-2 py-0.5 rounded-full text-[10px] font-bold"><i class="fa-solid fa-door-handle"></i> MANILLA</span>';
+
+                // Badge de nivel de empaque
+                let nivelBadge = '';
+                if (isMaster) {
+                    nivelBadge = '<span class="text-[10px] text-purple-300 font-bold">—</span>';
+                } else if (item.tiene_sub_empaque) {
+                    nivelBadge = '<span class="inline-flex items-center gap-1 text-cyan-300 bg-cyan-500/10 border border-cyan-500/30 px-2 py-0.5 rounded-full text-[10px] font-bold"><i class="fa-solid fa-layer-group"></i> Sub-empaque + Masterpack</span>';
+                } else {
+                    nivelBadge = '<span class="inline-flex items-center gap-1 text-amber-300 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-full text-[10px] font-bold"><i class="fa-solid fa-box"></i> Empaque Final + Masterpack</span>';
+                }
+
+                // Info de archivos
+                const subCount = (item.archivos_raiz || []).length;
+                const masterCount = (item.archivos_masterpack || []).length;
+                const archInfo = isMaster
+                    ? `<span class="text-purple-300">${masterCount} masterpack(s)</span>`
+                    : `<span class="text-cyan-300">${subCount} sub</span> · <span class="text-purple-300">${masterCount} mp</span>`;
+
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-800/50';
+                tr.innerHTML = `
+                    <td class="py-2 pr-3 text-slate-500 text-xs">${item.num || '—'}</td>
+                    <td class="py-2 pr-3 font-mono font-bold text-amber-300 select-all">${item.zce}</td>
+                    <td class="py-2 pr-3">${tipoBadge}</td>
+                    <td class="py-2 pr-3 text-slate-300 text-xs">${item.material || '—'}</td>
+                    <td class="py-2 pr-3 text-slate-400 text-xs">${item.forma || '—'}</td>
+                    <td class="py-2 pr-3 text-white font-medium text-xs">${item.ciudad || '—'}${item.tamaño ? ' <span class="text-slate-500">(' + item.tamaño + ')</span>' : ''}</td>
+                    <td class="py-2 pr-3">${nivelBadge}</td>
+                    <td class="py-2 pr-3 text-[10px] font-mono">${archInfo}</td>
+                    <td class="py-2 pr-3 text-center">
+                        <button onclick="copyEmpaqueZoe('${item.zce}')" class="px-2 py-1 bg-amber-500/90 hover:bg-amber-400 text-slate-950 rounded-md text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 mx-auto"><i class="fa-regular fa-copy"></i> Copiar</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Contadores
+            const total = EMPAQUE_CATALOG.length;
+            const conSub = EMPAQUE_CATALOG.filter(x => x.tiene_sub_empaque === true).length;
+            const sinSub = EMPAQUE_CATALOG.filter(x => x.tiene_sub_empaque === false && x.nombre && !x.nombre.includes('MASTER')).length;
+            const master = EMPAQUE_CATALOG.filter(x => x.nombre && x.nombre.includes('MASTER')).length;
+            document.getElementById('emp-counter-total').textContent = total;
+            document.getElementById('emp-counter-consub').textContent = conSub;
+            document.getElementById('emp-counter-sinsub').textContent = sinSub;
+            document.getElementById('emp-counter-master').textContent = master;
+            document.getElementById('emp-counter-result').textContent = `${data.length} coincidencia(s)`;
+        }
+
+        function copyEmpaqueZoe(zce) {
+            const tempInput = document.createElement("input");
+            tempInput.value = zce;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand("copy");
+            document.body.removeChild(tempInput);
+            showToast(`¡Copiado: ${zce}!`);
+        }
+
+        // Cargar catálogo al iniciar
+        loadEmpaqueCatalog();
+
+        function openHelpModal() {
+            const modal = document.getElementById('help-modal');
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+        }
+        function closeHelpModal() {
+            const modal = document.getElementById('help-modal');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+        }
+    </script>
+</body>
+</html>
