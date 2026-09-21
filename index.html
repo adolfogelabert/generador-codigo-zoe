@@ -11,6 +11,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- JsBarcode para generar códigos de barra EAN-13 reales -->
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <!-- Firebase SDKs (compat) -->
+    <script src="https://www.gstatic.com/firebasejs/11.1.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore-compat.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
         body {
@@ -1176,17 +1179,91 @@
     <!-- Lógica de la aplicación -->
     <script>
         // =================================================================
-        // INVENTARIO EMBEBIDO: Códigos de barras en uso y libres (ZOE)
-        // Origen: INVENTARIO_CODIGOS_BARRAS.csv (97 EAN-13 únicos)
-        // Claves: bc = EAN-13 (13 dígitos), zce = nomenclatura ZOE,
-        // cat = categoría, estado = EN_USO | SIN_UTILIZAR, carpeta
+        // FIREBASE: Inicialización
         // =================================================================
-        const INVENTORY = [{"bc":"7451304212737","zce":"ZCE-8393BE","cat":"CerradurasEmbutir","estado":"EN_USO","carpeta":"ZCE-8393BE"},{"bc":"7451304212744","zce":"ZCE-9627BF","cat":"CerradurasEmbutir","estado":"EN_USO","carpeta":"ZCE-9627BF"},{"bc":"7451304212751","zce":"ZCE-2968BG","cat":"CerradurasEmbutir","estado":"EN_USO","carpeta":"ZCE-2968BG"},{"bc":"7451304212768","zce":"ZCE-4469BH","cat":"CerradurasEmbutir","estado":"EN_USO","carpeta":"ZCE-4469BH"},{"bc":"7451304212775","zce":"ZCE-6862BI","cat":"CerradurasEmbutir","estado":"EN_USO","carpeta":"ZCE-6862BI"},{"bc":"7451304212782","zce":"ZCE-4828BJ","cat":"CerradurasEmbutir","estado":"EN_USO","carpeta":"ZCE-4828BJ"},{"bc":"7451304212799","zce":"ZCE-2693BK","cat":"CerradurasEmbutir","estado":"EN_USO","carpeta":"ZCE-2693BK"},{"bc":"7451304212805","zce":"ZCE-7858BL","cat":"CerradurasEmbutir","estado":"EN_USO","carpeta":"ZCE-7858BL"},{"bc":"7451304212843","zce":"","cat":"Raiz","estado":"EN_USO","carpeta":"ADOLFO CODIGOS DE BARRAS"},{"bc":"7451304212898","zce":"","cat":"2018","estado":"EN_USO","carpeta":"Candado de Anticizalla"},{"bc":"7451304212904","zce":"ZCE-6554BV","cat":"2018","estado":"EN_USO","carpeta":"ZCE-6554BV"},{"bc":"7451304213307","zce":"ZCE-5874DJ","cat":"PDF","estado":"EN_USO","carpeta":"ZCE-5874DJ"},{"bc":"7451304213321","zce":"ZCE-4294DL","cat":"PDF","estado":"EN_USO","carpeta":"ZCE-4294DL"},{"bc":"7451304213383","zce":"ZCE-1799DU","cat":"PDF","estado":"EN_USO","carpeta":"ZCE-1799DU"},{"bc":"7451304213406","zce":"ZCE-1583DW","cat":"PDF","estado":"EN_USO","carpeta":"ZCE-1583DW"},{"bc":"7451304214564","zce":"ZCE-6979BY","cat":"2018","estado":"EN_USO","carpeta":"ZCE-6979BY"},{"bc":"7451304214779","zce":"","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"USADOS EN 2021"},{"bc":"7451304215950","zce":"ZCE-2981AA","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"1-ZCE-2981AA"},{"bc":"7451304215967","zce":"ZCE-4634AB","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"2-ZCE-4634AB"},{"bc":"7451304215974","zce":"ZCE-4321AC","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"3-ZCE-4321AC"},{"bc":"7451304215981","zce":"ZCE-7856AD","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"4-ZCE-7856AD"},{"bc":"7451304215998","zce":"ZCE-9147AE","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"5-ZCE-9147AE"},{"bc":"7451304216001","zce":"ZCE-2583AF","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"6-ZCE-2583AF"},{"bc":"7451304216018","zce":"ZCE-6712AG","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"7-ZCE-6712AG"},{"bc":"7451304216025","zce":"ZCE-3409AH","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"8-ZCE-3409AH"},{"bc":"7451304216032","zce":"ZCE-8745AI","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"9-ZCE-8745AI"},{"bc":"7451304216049","zce":"ZCE-1234AJ","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"10-ZCE-1234AJ"},{"bc":"7451304216056","zce":"ZCE-5678AK","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"11-ZCE-5678AK"},{"bc":"7451304216063","zce":"ZCE-9012AL","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"12-ZCE-9012AL"},{"bc":"7451304216070","zce":"ZCE-3456AM","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"13-ZCE-3456AM"},{"bc":"7451304216087","zce":"ZCE-7890AN","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"14-ZCE-7890AN"},{"bc":"7451304216094","zce":"ZCE-2345AO","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"15-ZCE-2345AO"},{"bc":"7451304216100","zce":"ZCE-6789AP","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"16-ZCE-6789AP"},{"bc":"7451304216117","zce":"ZCE-1122AQ","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"17-ZCE-1122AQ"},{"bc":"7451304216124","zce":"ZCE-3344AR","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"18-ZCE-3344AR"},{"bc":"7451304216131","zce":"ZCE-5566AS","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"19-ZCE-5566AS"},{"bc":"7451304216148","zce":"ZCE-7788AT","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"20-ZCE-7788AT"},{"bc":"7451304216155","zce":"ZCE-9900AU","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"21-ZCE-9900AU"},{"bc":"7451304216162","zce":"ZCE-1357AV","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"22-ZCE-1357AV"},{"bc":"7451304216179","zce":"ZCE-2468AW","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"23-ZCE-2468AW"},{"bc":"7451304216186","zce":"ZCE-8642AX","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"24-ZCE-8642AX"},{"bc":"7451304216193","zce":"ZCE-9753AY","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"25-ZCE-9753AY"},{"bc":"7451304216209","zce":"ZCE-1597AZ","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"26-ZCE-1597AZ"},{"bc":"7451304216216","zce":"ZCE-7531BA","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"27-ZCE-7531BA"},{"bc":"7451304216223","zce":"ZCE-4826BB","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"28-ZCE-4826BB"},{"bc":"7451304216230","zce":"ZCE-6914BC","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"29-ZCE-6914BC"},{"bc":"7451304216247","zce":"ZCE-8257BD","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"30-ZCE-8257BD"},{"bc":"7451304216254","zce":"ZCE-3478BE","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"31-ZCE-3478BE"},{"bc":"7451304216261","zce":"ZCE-9124BF","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"32-ZCE-9124BF"},{"bc":"7451304216278","zce":"ZCE-5693BG","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"33-ZCE-5693BG"},{"bc":"7451304216285","zce":"ZCE-1472BH","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"34-ZCE-1472BH"},{"bc":"7451304216292","zce":"ZCE-8526BI","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"35-ZCE-8526BI"},{"bc":"7451304216308","zce":"ZCE-4271BJ","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"36-ZCE-4271BJ"},{"bc":"7451304216315","zce":"ZCE-6395BK","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"37-ZCE-6395BK"},{"bc":"7451304216322","zce":"ZCE-2847BL","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"38-ZCE-2847BL"},{"bc":"7451304216339","zce":"ZCE-7182BM","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"39-ZCE-7182BM"},{"bc":"7451304216346","zce":"ZCE-9516BN","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"40-ZCE-9516BN"},{"bc":"7451304216353","zce":"ZCE-3758BO","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"41-ZCE-3758BO"},{"bc":"7451304216360","zce":"ZCE-6429BP","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"42-ZCE-6429BP"},{"bc":"7451304216377","zce":"ZCE-1836BQ","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"43-ZCE-1836BQ"},{"bc":"7451304216384","zce":"ZCE-5247BR","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"44-ZCE-5247BR"},{"bc":"7451304216391","zce":"ZCE-7962BS","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"45-ZCE-7962BS"},{"bc":"7451304216407","zce":"ZCE-3614BT","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"46-ZCE-3614BT"},{"bc":"7451304216414","zce":"ZCE-8251BU","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"47-ZCE-8251BU"},{"bc":"7451304216421","zce":"ZCE-4893BV","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"48-ZCE-4893BV"},{"bc":"7451304216438","zce":"ZCE-6172BW","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"49-ZCE-6172BW"},{"bc":"7451304216445","zce":"ZCE-2538BX","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"50-ZCE-2538BX"},{"bc":"7451304216452","zce":"ZCE-9417BY","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"51-ZCE-9417BY"},{"bc":"7451304216469","zce":"ZCE-3826BZ","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"52-ZCE-3826BZ"},{"bc":"7451304216476","zce":"ZCE-7159CA","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"53-ZCE-7159CA"},{"bc":"7451304216483","zce":"ZCE-4631CB","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"54-ZCE-4631CB"},{"bc":"7451304216490","zce":"ZCE-8284CC","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"55-ZCE-8284CC"},{"bc":"7451304216506","zce":"ZCE-1572CD","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"56-ZCE-1572CD"},{"bc":"7451304216513","zce":"ZCE-6925CE","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"57-ZCE-6925CE"},{"bc":"7451304216520","zce":"ZCE-3418CF","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"58-ZCE-3418CF"},{"bc":"7451304216537","zce":"ZCE-5783CG","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"59-ZCE-5783CG"},{"bc":"7451304216544","zce":"ZCE-8126CH","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"60-ZCE-8126CH"},{"bc":"7451304216551","zce":"ZCE-4295CI","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"61-ZCE-4295CI"},{"bc":"7451304216568","zce":"ZCE-6748CJ","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"62-ZCE-6748CJ"},{"bc":"7451304216575","zce":"ZCE-9131CK","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"63-ZCE-9131CK"},{"bc":"7451304216582","zce":"ZCE-2864CL","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"64-ZCE-2864CL"},{"bc":"7451304216599","zce":"ZCE-7519CM","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"65-ZCE-7519CM"},{"bc":"7451304216605","zce":"ZCE-3246CN","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"66-ZCE-3246CN"},{"bc":"7451304216612","zce":"ZCE-6981CO","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"67-ZCE-6981CO"},{"bc":"7451304216629","zce":"ZCE-1428CP","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"68-ZCE-1428CP"},{"bc":"7451304216636","zce":"ZCE-8753CQ","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"69-ZCE-8753CQ"},{"bc":"7451304216643","zce":"ZCE-4296CR","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"70-ZCE-4296CR"},{"bc":"7451304216650","zce":"ZCE-6158CS","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"71-ZCE-6158CS"},{"bc":"7451304216667","zce":"ZCE-2837CT","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"72-ZCE-2837CT"},{"bc":"7451304216674","zce":"ZCE-9514CU","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"73-ZCE-9514CU"},{"bc":"7451304216681","zce":"ZCE-3742CV","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"74-ZCE-3742CV"},{"bc":"7451304216698","zce":"ZCE-7628CW","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"75-ZCE-7628CW"},{"bc":"7451304216704","zce":"ZCE-4193CX","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"76-ZCE-4193CX"},{"bc":"7451304216896","zce":"","cat":"CerraduraPomoMinimalista","estado":"EN_USO","carpeta":"CerraduraPomoMinimalista"},{"bc":"7451304216902","zce":"","cat":"CodBarrasPomoEsfera","estado":"EN_USO","carpeta":"CodBarrasPomoEsfera"},{"bc":"7451304217411","zce":"ZCA-3064TP","cat":"ZCA","estado":"EN_USO","carpeta":"ZCA-3064TP"},{"bc":"7451304217428","zce":"ZCA-3025TP","cat":"ZCA","estado":"EN_USO","carpeta":"ZCA-3025TP"}];
+        const firebaseConfig = {
+            apiKey: "AIzaSyAV0yYgqOskyn8f3C2j3zDIg388ePStLo8",
+            authDomain: "zoe-generator.firebaseapp.com",
+            projectId: "zoe-generator",
+            storageBucket: "zoe-generator.firebasestorage.app",
+            messagingSenderId: "566481005690",
+            appId: "1:566481005690:web:bc6624c14b90fb6b459fc3"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // =================================================================
+        // INVENTARIO: datos de respaldo embebidos (se suben a Firestore si está vacío)
+        // =================================================================
+        const INVENTORY_FALLBACK = [{"bc":"7451304212737","zce":"ZCE-8393BE","cat":"CerradurasEmbutir","estado":"EN_USO","carpeta":"ZCE-8393BE"},{"bc":"7451304212744","zce":"ZCE-9627BF","cat":"CerradurasEmbutir","estado":"EN_USO","carpeta":"ZCE-9627BF"},{"bc":"7451304212751","zce":"ZCE-2968BG","cat":"CerradurasEmbutir","estado":"EN_USO","carpeta":"ZCE-2968BG"},{"bc":"7451304212768","zce":"ZCE-4469BH","cat":"CerradurasEmbutir","estado":"EN_USO","carpeta":"ZCE-4469BH"},{"bc":"7451304212775","zce":"ZCE-6862BI","cat":"CerradurasEmbutir","estado":"EN_USO","carpeta":"ZCE-6862BI"},{"bc":"7451304212782","zce":"ZCE-4828BJ","cat":"CerradurasEmbutir","estado":"EN_USO","carpeta":"ZCE-4828BJ"},{"bc":"7451304212799","zce":"ZCE-2693BK","cat":"CerradurasEmbutir","estado":"EN_USO","carpeta":"ZCE-2693BK"},{"bc":"7451304212805","zce":"ZCE-7858BL","cat":"CerradurasEmbutir","estado":"EN_USO","carpeta":"ZCE-7858BL"},{"bc":"7451304212843","zce":"","cat":"Raiz","estado":"EN_USO","carpeta":"ADOLFO CODIGOS DE BARRAS"},{"bc":"7451304212898","zce":"","cat":"2018","estado":"EN_USO","carpeta":"Candado de Anticizalla"},{"bc":"7451304212904","zce":"ZCE-6554BV","cat":"2018","estado":"EN_USO","carpeta":"ZCE-6554BV"},{"bc":"7451304213307","zce":"ZCE-5874DJ","cat":"PDF","estado":"EN_USO","carpeta":"ZCE-5874DJ"},{"bc":"7451304213321","zce":"ZCE-4294DL","cat":"PDF","estado":"EN_USO","carpeta":"ZCE-4294DL"},{"bc":"7451304213383","zce":"ZCE-1799DU","cat":"PDF","estado":"EN_USO","carpeta":"ZCE-1799DU"},{"bc":"7451304213406","zce":"ZCE-1583DW","cat":"PDF","estado":"EN_USO","carpeta":"ZCE-1583DW"},{"bc":"7451304214564","zce":"ZCE-6979BY","cat":"2018","estado":"EN_USO","carpeta":"ZCE-6979BY"},{"bc":"7451304214779","zce":"","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"USADOS EN 2021"},{"bc":"7451304215950","zce":"ZCE-2981AA","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"1-ZCE-2981AA"},{"bc":"7451304215967","zce":"ZCE-4634AB","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"2-ZCE-4634AB"},{"bc":"7451304215974","zce":"ZCE-4321AC","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"3-ZCE-4321AC"},{"bc":"7451304215981","zce":"ZCE-7856AD","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"4-ZCE-7856AD"},{"bc":"7451304215998","zce":"ZCE-9147AE","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"5-ZCE-9147AE"},{"bc":"7451304216001","zce":"ZCE-2583AF","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"6-ZCE-2583AF"},{"bc":"7451304216018","zce":"ZCE-6712AG","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"7-ZCE-6712AG"},{"bc":"7451304216025","zce":"ZCE-3409AH","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"8-ZCE-3409AH"},{"bc":"7451304216032","zce":"ZCE-8745AI","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"9-ZCE-8745AI"},{"bc":"7451304216049","zce":"ZCE-1234AJ","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"10-ZCE-1234AJ"},{"bc":"7451304216056","zce":"ZCE-5678AK","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"11-ZCE-5678AK"},{"bc":"7451304216063","zce":"ZCE-9012AL","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"12-ZCE-9012AL"},{"bc":"7451304216070","zce":"ZCE-3456AM","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"13-ZCE-3456AM"},{"bc":"7451304216087","zce":"ZCE-7890AN","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"14-ZCE-7890AN"},{"bc":"7451304216094","zce":"ZCE-2345AO","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"15-ZCE-2345AO"},{"bc":"7451304216100","zce":"ZCE-6789AP","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"16-ZCE-6789AP"},{"bc":"7451304216117","zce":"ZCE-1122AQ","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"17-ZCE-1122AQ"},{"bc":"7451304216124","zce":"ZCE-3344AR","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"18-ZCE-3344AR"},{"bc":"7451304216131","zce":"ZCE-5566AS","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"19-ZCE-5566AS"},{"bc":"7451304216148","zce":"ZCE-7788AT","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"20-ZCE-7788AT"},{"bc":"7451304216155","zce":"ZCE-9900AU","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"21-ZCE-9900AU"},{"bc":"7451304216162","zce":"ZCE-1357AV","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"22-ZCE-1357AV"},{"bc":"7451304216179","zce":"ZCE-2468AW","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"23-ZCE-2468AW"},{"bc":"7451304216186","zce":"ZCE-8642AX","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"24-ZCE-8642AX"},{"bc":"7451304216193","zce":"ZCE-9753AY","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"25-ZCE-9753AY"},{"bc":"7451304216209","zce":"ZCE-1597AZ","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"26-ZCE-1597AZ"},{"bc":"7451304216216","zce":"ZCE-7531BA","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"27-ZCE-7531BA"},{"bc":"7451304216223","zce":"ZCE-4826BB","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"28-ZCE-4826BB"},{"bc":"7451304216230","zce":"ZCE-6914BC","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"29-ZCE-6914BC"},{"bc":"7451304216247","zce":"ZCE-8257BD","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"30-ZCE-8257BD"},{"bc":"7451304216254","zce":"ZCE-3478BE","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"31-ZCE-3478BE"},{"bc":"7451304216261","zce":"ZCE-9124BF","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"32-ZCE-9124BF"},{"bc":"7451304216278","zce":"ZCE-5693BG","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"33-ZCE-5693BG"},{"bc":"7451304216285","zce":"ZCE-1472BH","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"34-ZCE-1472BH"},{"bc":"7451304216292","zce":"ZCE-8526BI","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"35-ZCE-8526BI"},{"bc":"7451304216308","zce":"ZCE-4271BJ","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"36-ZCE-4271BJ"},{"bc":"7451304216315","zce":"ZCE-6395BK","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"37-ZCE-6395BK"},{"bc":"7451304216322","zce":"ZCE-2847BL","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"38-ZCE-2847BL"},{"bc":"7451304216339","zce":"ZCE-7182BM","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"39-ZCE-7182BM"},{"bc":"7451304216346","zce":"ZCE-9516BN","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"40-ZCE-9516BN"},{"bc":"7451304216353","zce":"ZCE-3758BO","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"41-ZCE-3758BO"},{"bc":"7451304216360","zce":"ZCE-6429BP","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"42-ZCE-6429BP"},{"bc":"7451304216377","zce":"ZCE-1836BQ","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"43-ZCE-1836BQ"},{"bc":"7451304216384","zce":"ZCE-5247BR","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"44-ZCE-5247BR"},{"bc":"7451304216391","zce":"ZCE-7962BS","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"45-ZCE-7962BS"},{"bc":"7451304216407","zce":"ZCE-3614BT","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"46-ZCE-3614BT"},{"bc":"7451304216414","zce":"ZCE-8251BU","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"47-ZCE-8251BU"},{"bc":"7451304216421","zce":"ZCE-4893BV","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"48-ZCE-4893BV"},{"bc":"7451304216438","zce":"ZCE-6172BW","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"49-ZCE-6172BW"},{"bc":"7451304216445","zce":"ZCE-2538BX","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"50-ZCE-2538BX"},{"bc":"7451304216452","zce":"ZCE-9417BY","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"51-ZCE-9417BY"},{"bc":"7451304216469","zce":"ZCE-3826BZ","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"52-ZCE-3826BZ"},{"bc":"7451304216476","zce":"ZCE-7159CA","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"53-ZCE-7159CA"},{"bc":"7451304216483","zce":"ZCE-4631CB","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"54-ZCE-4631CB"},{"bc":"7451304216490","zce":"ZCE-8284CC","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"55-ZCE-8284CC"},{"bc":"7451304216506","zce":"ZCE-1572CD","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"56-ZCE-1572CD"},{"bc":"7451304216513","zce":"ZCE-6925CE","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"57-ZCE-6925CE"},{"bc":"7451304216520","zce":"ZCE-3418CF","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"58-ZCE-3418CF"},{"bc":"7451304216537","zce":"ZCE-5783CG","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"59-ZCE-5783CG"},{"bc":"7451304216544","zce":"ZCE-8126CH","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"60-ZCE-8126CH"},{"bc":"7451304216551","zce":"ZCE-4295CI","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"61-ZCE-4295CI"},{"bc":"7451304216568","zce":"ZCE-6748CJ","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"62-ZCE-6748CJ"},{"bc":"7451304216575","zce":"ZCE-9131CK","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"63-ZCE-9131CK"},{"bc":"7451304216582","zce":"ZCE-2864CL","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"64-ZCE-2864CL"},{"bc":"7451304216599","zce":"ZCE-7519CM","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"65-ZCE-7519CM"},{"bc":"7451304216605","zce":"ZCE-3246CN","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"66-ZCE-3246CN"},{"bc":"7451304216612","zce":"ZCE-6981CO","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"67-ZCE-6981CO"},{"bc":"7451304216629","zce":"ZCE-1428CP","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"68-ZCE-1428CP"},{"bc":"7451304216636","zce":"ZCE-8753CQ","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"69-ZCE-8753CQ"},{"bc":"7451304216643","zce":"ZCE-4296CR","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"70-ZCE-4296CR"},{"bc":"7451304216650","zce":"ZCE-6158CS","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"71-ZCE-6158CS"},{"bc":"7451304216667","zce":"ZCE-2837CT","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"72-ZCE-2837CT"},{"bc":"7451304216674","zce":"ZCE-9514CU","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"73-ZCE-9514CU"},{"bc":"7451304216681","zce":"ZCE-3742CV","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"74-ZCE-3742CV"},{"bc":"7451304216698","zce":"ZCE-7628CW","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"75-ZCE-7628CW"},{"bc":"7451304216704","zce":"ZCE-4193CX","cat":"SIN_UTILIZAR","estado":"SIN_UTILIZAR","carpeta":"76-ZCE-4193CX"},{"bc":"7451304216896","zce":"","cat":"CerraduraPomoMinimalista","estado":"EN_USO","carpeta":"CerraduraPomoMinimalista"},{"bc":"7451304216902","zce":"","cat":"CodBarrasPomoEsfera","estado":"EN_USO","carpeta":"CodBarrasPomoEsfera"},{"bc":"7451304217411","zce":"ZCA-3064TP","cat":"ZCA","estado":"EN_USO","carpeta":"ZCA-3064TP"},{"bc":"7451304217428","zce":"ZCA-3025TP","cat":"ZCA","estado":"EN_USO","carpeta":"ZCA-3025TP"}];
+
+        // INVENTORY se carga desde Firestore; fallback al embebido
+        let INVENTORY = [];
+        let dbReady = false;
 
         // Set de EAN-13 en uso (para validaciones rápidas)
-        const USED_BARCODES = new Set(INVENTORY.filter(x => x.estado === 'EN_USO').map(x => x.bc));
+        let USED_BARCODES = new Set();
         // Set de nomenclaturas ZOE ya asignadas (para evitar duplicados)
-        const USED_ZOE_CODES = new Set(INVENTORY.filter(x => x.zce && x.estado === 'EN_USO').map(x => x.zce));
+        let USED_ZOE_CODES = new Set();
+
+        // =================================================================
+        // FIREBASE: Carga inicial desde Firestore
+        // =================================================================
+        async function loadInventoryFromFirestore() {
+            try {
+                const snapshot = await db.collection('inventory').orderBy('bc').get();
+                if (snapshot.empty) {
+                    console.log('[Firebase] Firestore vacío, subiendo datos iniciales...');
+                    await seedInventoryToFirestore();
+                    return;
+                }
+                INVENTORY = [];
+                snapshot.forEach(doc => {
+                    INVENTORY.push({ id: doc.id, ...doc.data() });
+                });
+                console.log('[Firebase] ' + INVENTORY.length + ' items cargados desde Firestore');
+            } catch (err) {
+                console.warn('[Firebase] Error cargando desde Firestore, usando fallback:', err);
+                INVENTORY = INVENTORY_FALLBACK.map(x => ({ ...x }));
+            }
+            rebuildSets();
+            dbReady = true;
+        }
+
+        async function seedInventoryToFirestore() {
+            const batch = db.batch();
+            INVENTORY_FALLBACK.forEach(item => {
+                const ref = db.collection('inventory').doc(item.bc);
+                batch.set(ref, item);
+            });
+            await batch.commit();
+            console.log('[Firebase] ' + INVENTORY_FALLBACK.length + ' items subidos a Firestore');
+            INVENTORY = INVENTORY_FALLBACK.map(x => ({ ...x }));
+            rebuildSets();
+        }
+
+        function rebuildSets() {
+            USED_BARCODES = new Set(INVENTORY.filter(x => x.estado === 'EN_USO').map(x => x.bc));
+            USED_ZOE_CODES = new Set(INVENTORY.filter(x => x.zce && x.estado === 'EN_USO').map(x => x.zce));
+        }
+
+        function syncInventoryToFirestore(bc, updates) {
+            db.collection('inventory').doc(bc).update(updates).catch(err => {
+                console.error('[Firebase] Error sincronizando inventario:', err);
+            });
+        }
+
+        function syncRegistroToFirestore(registro) {
+            db.collection('registros').add({ ...registro, fecha: new Date().toISOString() }).catch(err => {
+                console.error('[Firebase] Error guardando registro:', err);
+            });
+        }
+
+        function syncLiberacionToFirestore(entry) {
+            db.collection('liberaciones').add({ ...entry, fechaTs: new Date().toISOString() }).catch(err => {
+                console.error('[Firebase] Error guardando liberación:', err);
+            });
+        }
 
         // Estado de la sesión
         let activePrefix = 'ZCA';
@@ -1216,6 +1293,8 @@
                 motivo: motivo || 'Producto descontinuado'
             });
             localStorage.setItem('zoe_liberation_history', JSON.stringify(liberationHistory));
+            syncInventoryToFirestore(bc, { estado: 'LIBERADO' });
+            syncLiberacionToFirestore({ bc, zce: item.zce || '', cat: item.cat || '', carpeta: item.carpeta || '', motivo, fecha: new Date().toISOString().slice(0, 10) });
 
             updateInventoryCounters();
             return true;
@@ -1231,6 +1310,7 @@
             // Quitar del historial
             liberationHistory = liberationHistory.filter(x => x.bc !== bc);
             localStorage.setItem('zoe_liberation_history', JSON.stringify(liberationHistory));
+            syncInventoryToFirestore(bc, { estado: 'EN_USO' });
 
             updateInventoryCounters();
             return true;
@@ -1245,7 +1325,8 @@
         }
 
         // Inicialización al cargar la página
-        window.onload = function() {
+        window.onload = async function() {
+            await loadInventoryFromFirestore();
             // Valores por defecto consistentes con tus archivos
             document.getElementById('ident-number').value = '3064';
             document.getElementById('char-suffix').value = 'TP';
@@ -1698,20 +1779,6 @@
             renderInventoryTable();
             showToast(`BC ${bc} restaurado a EN_USO`);
         }
-            const item = INVENTORY.find(x => x.bc === bc);
-            if (!item) return;
-            document.getElementById('ean-company').value = bc.substring(0, 7);
-            document.getElementById('ean-sequence').value = bc.substring(7, 12);
-            assignedInSession.add(bc);
-            closeInventoryModal();
-            updateEANCalculations();
-            updateInventoryCounters();
-            const fb = document.getElementById('free-assign-feedback');
-            fb.classList.remove('hidden');
-            fb.className = 'text-[11px] text-emerald-400';
-            fb.innerHTML = `<i class="fa-solid fa-circle-check"></i> Cargado <span class="font-bold">${bc}</span> desde el modal de inventario.`;
-            showToast(`BC ${bc} cargado y reservado en sesión`);
-        }
 
         // Carga los datos de un item en uso para visualizarlos en el formulario
         // Carga un BC libre en el formulario desde el modal
@@ -1938,6 +2005,8 @@
             USED_BARCODES.add(fullEan);
             USED_ZOE_CODES.add(finalZoeCode);
             assignedInSession.delete(fullEan);
+            syncInventoryToFirestore(fullEan, { estado: 'EN_USO', zce: finalZoeCode, cat: desc, carpeta: finalZoeCode });
+            syncRegistroToFirestore({ code: finalZoeCode, ean: fullEan, prefix: activePrefix, ident, suffix, desc, color, size });
             updateInventoryCounters();
             showToast("Artículo y EAN-13 registrado con éxito");
             
@@ -2006,6 +2075,8 @@
                 });
                 USED_BARCODES.add(fullEan);
                 USED_ZOE_CODES.add(zoeCode);
+                syncInventoryToFirestore(fullEan, { estado: 'EN_USO', zce: zoeCode, cat: 'LOTE', carpeta: zoeCode });
+                syncRegistroToFirestore({ code: zoeCode, ean: fullEan, prefix: zoePrefix, ident: curZoeIdent.toString(), suffix, desc: 'LOTE GENERADO MASIVO', color: '-', size: '-' });
                 creados++;
             }
 
@@ -2692,6 +2763,8 @@
             USED_BARCODES.add(fullEan);
             USED_ZOE_CODES.add(zoeCode);
             assignedInSession.delete(fullEan);
+            syncInventoryToFirestore(fullEan, { estado: 'EN_USO', zce: zoeCode, cat: desc, carpeta: zoeCode });
+            syncRegistroToFirestore({ code: zoeCode, ean: fullEan, prefix, ident, suffix, desc, color, size });
 
             renderHistory();
             updateInventoryCounters();
