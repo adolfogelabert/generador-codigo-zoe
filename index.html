@@ -64,6 +64,9 @@
                 <button onclick="openEmpaqueSearchModal()" class="px-3 sm:px-4 py-2 text-sm font-medium rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-all duration-200 flex items-center gap-2 border border-slate-800" title="Buscar modelos de empaques ya diseñados">
                     <i class="fa-solid fa-boxes-stacked"></i><span class="hidden md:inline">Empaques</span>
                 </button>
+                <button onclick="openReportesModal()" class="px-3 sm:px-4 py-2 text-sm font-medium rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-all duration-200 flex items-center gap-2 border border-slate-800" title="Generar reportes de inventario, códigos ZOE y barras">
+                    <i class="fa-solid fa-chart-pie"></i><span class="hidden md:inline">Reportes</span>
+                </button>
                 <button onclick="openHelpModal()" class="text-slate-400 hover:text-white transition-colors">
                     <i class="fa-regular fa-circle-question text-xl"></i>
                 </button>
@@ -434,6 +437,239 @@
         </div>
 
     </main>
+
+    <!-- Modal: Generador de Reportes -->
+    <div id="reportes-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300 p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-6xl max-h-[92vh] flex flex-col shadow-2xl relative">
+            <!-- Header -->
+            <div class="p-5 border-b border-slate-800 flex justify-between items-start gap-4 shrink-0">
+                <div>
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-chart-pie text-indigo-400"></i> Generador de Reportes
+                    </h3>
+                    <p class="text-xs text-slate-400 mt-1">Reportes de inventario, códigos ZOE y códigos de barras. Exporta a CSV o imprime.</p>
+                </div>
+                <button onclick="closeReportesModal()" class="text-slate-400 hover:text-white text-xl shrink-0">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Tabs -->
+            <div class="flex border-b border-slate-800 shrink-0">
+                <button onclick="switchReportTab('inventario')" id="rptTab-inventario" class="flex-1 px-4 py-3 text-sm font-semibold text-indigo-400 border-b-2 border-indigo-500 bg-indigo-500/5 transition-all">
+                    <i class="fa-solid fa-warehouse mr-2"></i>Inventario General
+                </button>
+                <button onclick="switchReportTab('zoe')" id="rptTab-zoe" class="flex-1 px-4 py-3 text-sm font-semibold text-slate-400 border-b-2 border-transparent hover:text-white hover:bg-slate-800/50 transition-all">
+                    <i class="fa-solid fa-tag mr-2"></i>Códigos ZOE
+                </button>
+                <button onclick="switchReportTab('barras')" id="rptTab-barras" class="flex-1 px-4 py-3 text-sm font-semibold text-slate-400 border-b-2 border-transparent hover:text-white hover:bg-slate-800/50 transition-all">
+                    <i class="fa-solid fa-barcode mr-2"></i>Códigos de Barras
+                </button>
+            </div>
+
+            <!-- Contenido scrolleable -->
+            <div class="flex-1 overflow-y-auto p-5 space-y-5">
+
+                <!-- ====== REPORTE: INVENTARIO GENERAL ====== -->
+                <div id="rptSection-inventario">
+                    <!-- Resumen -->
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
+                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-center">
+                            <div class="text-2xl font-black text-white" id="rpt-inv-total">0</div>
+                            <div class="text-[10px] text-slate-400 uppercase tracking-wider mt-1">Total BC</div>
+                        </div>
+                        <div class="bg-slate-950 border border-rose-500/30 rounded-xl p-3 text-center">
+                            <div class="text-2xl font-black text-rose-400" id="rpt-inv-usados">0</div>
+                            <div class="text-[10px] text-rose-400/70 uppercase tracking-wider mt-1">EN_USO</div>
+                        </div>
+                        <div class="bg-slate-950 border border-emerald-500/30 rounded-xl p-3 text-center">
+                            <div class="text-2xl font-black text-emerald-400" id="rpt-inv-libres">0</div>
+                            <div class="text-[10px] text-emerald-400/70 uppercase tracking-wider mt-1">SIN_UTILIZAR</div>
+                        </div>
+                        <div class="bg-slate-950 border border-amber-500/30 rounded-xl p-3 text-center">
+                            <div class="text-2xl font-black text-amber-400" id="rpt-inv-con-zce">0</div>
+                            <div class="text-[10px] text-amber-400/70 uppercase tracking-wider mt-1">Con ZOE</div>
+                        </div>
+                        <div class="bg-slate-950 border border-purple-500/30 rounded-xl p-3 text-center">
+                            <div class="text-2xl font-black text-purple-400" id="rpt-inv-sin-zce">0</div>
+                            <div class="text-[10px] text-purple-400/70 uppercase tracking-wider mt-1">Sin ZOE</div>
+                        </div>
+                    </div>
+                    <!-- Barra de proporción -->
+                    <div class="mb-5 bg-slate-950 rounded-full h-4 overflow-hidden border border-slate-800 flex">
+                        <div id="rpt-inv-bar-usados" class="bg-rose-500 h-full transition-all" style="width:0%"></div>
+                        <div id="rpt-inv-bar-libres" class="bg-emerald-500 h-full transition-all" style="width:0%"></div>
+                    </div>
+                    <!-- Filtros -->
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        <select id="rpt-inv-filter" onchange="renderReporteInventario()" class="bg-slate-950 border border-slate-800 rounded-lg text-xs text-white px-3 py-2 focus:outline-none focus:border-indigo-500">
+                            <option value="">Todos los estados</option>
+                            <option value="EN_USO">Solo EN_USO</option>
+                            <option value="SIN_UTILIZAR">Solo SIN_UTILIZAR</option>
+                        </select>
+                        <select id="rpt-inv-filter-cat" onchange="renderReporteInventario()" class="bg-slate-950 border border-slate-800 rounded-lg text-xs text-white px-3 py-2 focus:outline-none focus:border-indigo-500">
+                            <option value="">Todas las categorías</option>
+                        </select>
+                        <div class="flex-1"></div>
+                        <button onclick="exportReporteInventario()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors"><i class="fa-solid fa-file-excel"></i> CSV</button>
+                        <button onclick="printReport('rpt-inv-table')" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 border border-slate-700 transition-colors"><i class="fa-solid fa-print"></i> Imprimir</button>
+                    </div>
+                    <!-- Tabla -->
+                    <div class="overflow-x-auto bg-slate-950 border border-slate-800 rounded-xl">
+                        <table class="w-full text-left border-collapse text-sm" id="rpt-inv-table">
+                            <thead class="bg-slate-900 sticky top-0 z-10">
+                                <tr class="text-[10px] text-slate-400 uppercase tracking-wider border-b border-slate-800">
+                                    <th class="px-4 py-3">Estado</th>
+                                    <th class="px-4 py-3">EAN-13</th>
+                                    <th class="px-4 py-3">Nomenclatura ZOE</th>
+                                    <th class="px-4 py-3">Categoría</th>
+                                    <th class="px-4 py-3">Carpeta</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rpt-inv-rows" class="divide-y divide-slate-800/50 text-slate-300"></tbody>
+                        </table>
+                    </div>
+                    <p class="text-[10px] text-slate-500 mt-2 text-right" id="rpt-inv-count">0 registros</p>
+                </div>
+
+                <!-- ====== REPORTE: CÓDIGOS ZOE ====== -->
+                <div id="rptSection-zoe" class="hidden">
+                    <!-- Resumen -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-center">
+                            <div class="text-2xl font-black text-white" id="rpt-zoe-total">0</div>
+                            <div class="text-[10px] text-slate-400 uppercase tracking-wider mt-1">Total ZOE</div>
+                        </div>
+                        <div class="bg-slate-950 border border-teal-500/30 rounded-xl p-3 text-center">
+                            <div class="text-2xl font-black text-teal-400" id="rpt-zoe-con-bc">0</div>
+                            <div class="text-[10px] text-teal-400/70 uppercase tracking-wider mt-1">Con BC asignado</div>
+                        </div>
+                        <div class="bg-slate-950 border border-amber-500/30 rounded-xl p-3 text-center">
+                            <div class="text-2xl font-black text-amber-400" id="rpt-zoe-sin-bc">0</div>
+                            <div class="text-[10px] text-amber-400/70 uppercase tracking-wider mt-1">Sin BC (historial)</div>
+                        </div>
+                        <div class="bg-slate-950 border border-purple-500/30 rounded-xl p-3 text-center">
+                            <div class="text-2xl font-black text-purple-400" id="rpt-zoe-prefixes">0</div>
+                            <div class="text-[10px] text-purple-400/70 uppercase tracking-wider mt-1">Prefijos únicos</div>
+                        </div>
+                    </div>
+                    <!-- Desglose por prefijo -->
+                    <div class="mb-5 bg-slate-950 border border-slate-800 rounded-xl p-4">
+                        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3"><i class="fa-solid fa-chart-bar mr-1"></i> Desglose por Prefijo</h4>
+                        <div id="rpt-zoe-prefix-bars" class="space-y-2"></div>
+                    </div>
+                    <!-- Filtros -->
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        <select id="rpt-zoe-filter-prefix" onchange="renderReporteZOE()" class="bg-slate-950 border border-slate-800 rounded-lg text-xs text-white px-3 py-2 focus:outline-none focus:border-indigo-500">
+                            <option value="">Todos los prefijos</option>
+                        </select>
+                        <select id="rpt-zoe-filter-status" onchange="renderReporteZOE()" class="bg-slate-950 border border-slate-800 rounded-lg text-xs text-white px-3 py-2 focus:outline-none focus:border-indigo-500">
+                            <option value="">Todos los estados</option>
+                            <option value="CON_BC">Con código de barras</option>
+                            <option value="SIN_BC">Sin código de barras</option>
+                        </select>
+                        <div class="flex-1"></div>
+                        <button onclick="exportReporteZOE()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors"><i class="fa-solid fa-file-excel"></i> CSV</button>
+                        <button onclick="printReport('rpt-zoe-table')" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 border border-slate-700 transition-colors"><i class="fa-solid fa-print"></i> Imprimir</button>
+                    </div>
+                    <!-- Tabla -->
+                    <div class="overflow-x-auto bg-slate-950 border border-slate-800 rounded-xl">
+                        <table class="w-full text-left border-collapse text-sm" id="rpt-zoe-table">
+                            <thead class="bg-slate-900 sticky top-0 z-10">
+                                <tr class="text-[10px] text-slate-400 uppercase tracking-wider border-b border-slate-800">
+                                    <th class="px-4 py-3">Nomenclatura ZOE</th>
+                                    <th class="px-4 py-3">Prefijo</th>
+                                    <th class="px-4 py-3">Ident</th>
+                                    <th class="px-4 py-3">Sufijo</th>
+                                    <th class="px-4 py-3">EAN-13 Asignado</th>
+                                    <th class="px-4 py-3">Estado</th>
+                                    <th class="px-4 py-3">Categoría</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rpt-zoe-rows" class="divide-y divide-slate-800/50 text-slate-300"></tbody>
+                        </table>
+                    </div>
+                    <p class="text-[10px] text-slate-500 mt-2 text-right" id="rpt-zoe-count">0 registros</p>
+                </div>
+
+                <!-- ====== REPORTE: CÓDIGOS DE BARRAS ====== -->
+                <div id="rptSection-barras" class="hidden">
+                    <!-- Resumen -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-center">
+                            <div class="text-2xl font-black text-white" id="rpt-bc-total">0</div>
+                            <div class="text-[10px] text-slate-400 uppercase tracking-wider mt-1">Total EAN-13</div>
+                        </div>
+                        <div class="bg-slate-950 border border-rose-500/30 rounded-xl p-3 text-center">
+                            <div class="text-2xl font-black text-rose-400" id="rpt-bc-usados">0</div>
+                            <div class="text-[10px] text-rose-400/70 uppercase tracking-wider mt-1">Asignados</div>
+                        </div>
+                        <div class="bg-slate-950 border border-emerald-500/30 rounded-xl p-3 text-center">
+                            <div class="text-2xl font-black text-emerald-400" id="rpt-bc-libres">0</div>
+                            <div class="text-[10px] text-emerald-400/70 uppercase tracking-wider mt-1">Disponibles</div>
+                        </div>
+                        <div class="bg-slate-950 border border-cyan-500/30 rounded-xl p-3 text-center">
+                            <div class="text-2xl font-black text-cyan-400" id="rpt-bc-pct">0%</div>
+                            <div class="text-[10px] text-cyan-400/70 uppercase tracking-wider mt-1">% Uso</div>
+                        </div>
+                    </div>
+                    <!-- Barra de utilización -->
+                    <div class="mb-5">
+                        <div class="flex justify-between text-[10px] text-slate-400 mb-1">
+                            <span>0%</span><span>Utilización de códigos de barras</span><span>100%</span>
+                        </div>
+                        <div class="bg-slate-950 rounded-full h-5 overflow-hidden border border-slate-800 flex">
+                            <div id="rpt-bc-bar-usados" class="bg-gradient-to-r from-rose-600 to-rose-400 h-full transition-all flex items-center justify-center" style="width:0%">
+                                <span id="rpt-bc-bar-label-usados" class="text-[9px] font-bold text-white"></span>
+                            </div>
+                            <div id="rpt-bc-bar-libres" class="bg-gradient-to-r from-emerald-500 to-emerald-400 h-full transition-all flex items-center justify-center" style="width:0%">
+                                <span id="rpt-bc-bar-label-libres" class="text-[9px] font-bold text-slate-950"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Rangos EAN -->
+                    <div class="mb-5 bg-slate-950 border border-slate-800 rounded-xl p-4">
+                        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3"><i class="fa-solid fa-arrow-right-arrow-left mr-1"></i> Rangos de Secuencial EAN-13</h4>
+                        <div id="rpt-bc-ranges" class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs"></div>
+                    </div>
+                    <!-- Filtros -->
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        <select id="rpt-bc-filter" onchange="renderReporteBarras()" class="bg-slate-950 border border-slate-800 rounded-lg text-xs text-white px-3 py-2 focus:outline-none focus:border-indigo-500">
+                            <option value="">Todos</option>
+                            <option value="EN_USO">Asignados (EN_USO)</option>
+                            <option value="SIN_UTILIZAR">Disponibles (SIN_UTILIZAR)</option>
+                        </select>
+                        <select id="rpt-bc-filter-prefix" onchange="renderReporteBarras()" class="bg-slate-950 border border-slate-800 rounded-lg text-xs text-white px-3 py-2 focus:outline-none focus:border-indigo-500">
+                            <option value="">Todos los prefijos ZOE</option>
+                            <option value="CON_ZCE">Con ZOE vinculado</option>
+                            <option value="SIN_ZCE">Sin ZOE vinculado</option>
+                        </select>
+                        <div class="flex-1"></div>
+                        <button onclick="exportReporteBarras()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors"><i class="fa-solid fa-file-excel"></i> CSV</button>
+                        <button onclick="printReport('rpt-bc-table')" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 border border-slate-700 transition-colors"><i class="fa-solid fa-print"></i> Imprimir</button>
+                    </div>
+                    <!-- Tabla -->
+                    <div class="overflow-x-auto bg-slate-950 border border-slate-800 rounded-xl">
+                        <table class="w-full text-left border-collapse text-sm" id="rpt-bc-table">
+                            <thead class="bg-slate-900 sticky top-0 z-10">
+                                <tr class="text-[10px] text-slate-400 uppercase tracking-wider border-b border-slate-800">
+                                    <th class="px-4 py-3">Estado</th>
+                                    <th class="px-4 py-3">EAN-13</th>
+                                    <th class="px-4 py-3">Secuencial</th>
+                                    <th class="px-4 py-3">ZOE Vinculado</th>
+                                    <th class="px-4 py-3">Categoría</th>
+                                    <th class="px-4 py-3">Carpeta</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rpt-bc-rows" class="divide-y divide-slate-800/50 text-slate-300"></tbody>
+                        </table>
+                    </div>
+                    <p class="text-[10px] text-slate-500 mt-2 text-right" id="rpt-bc-count">0 registros</p>
+                </div>
+
+            </div>
+        </div>
+    </div>
 
     <!-- Modal de Ayuda / Glosario -->
     <div id="help-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
@@ -1777,6 +2013,373 @@
 
         // Cargar catálogo al iniciar
         loadEmpaqueCatalog();
+
+        // =================================================================
+        // GENERADOR DE REPORTES
+        // =================================================================
+
+        function openReportesModal() {
+            document.getElementById('reportes-modal').classList.remove('opacity-0', 'pointer-events-none');
+            populateReportFilters();
+            renderReporteInventario();
+            renderReporteZOE();
+            renderReporteBarras();
+        }
+
+        function closeReportesModal() {
+            document.getElementById('reportes-modal').classList.add('opacity-0', 'pointer-events-none');
+        }
+
+        function switchReportTab(tab) {
+            const tabs = ['inventario', 'zoe', 'barras'];
+            tabs.forEach(t => {
+                const sec = document.getElementById(`rptSection-${t}`);
+                const btn = document.getElementById(`rptTab-${t}`);
+                if (t === tab) {
+                    sec.classList.remove('hidden');
+                    btn.classList.add('text-indigo-400', 'border-indigo-500', 'bg-indigo-500/5');
+                    btn.classList.remove('text-slate-400', 'border-transparent');
+                } else {
+                    sec.classList.add('hidden');
+                    btn.classList.remove('text-indigo-400', 'border-indigo-500', 'bg-indigo-500/5');
+                    btn.classList.add('text-slate-400', 'border-transparent');
+                }
+            });
+        }
+
+        function populateReportFilters() {
+            // Categorías del inventario
+            const cats = [...new Set(INVENTORY.map(x => x.cat).filter(Boolean))].sort();
+            const catSelect = document.getElementById('rpt-inv-filter-cat');
+            const currentCat = catSelect.value;
+            catSelect.innerHTML = '<option value="">Todas las categorías</option>';
+            cats.forEach(c => {
+                catSelect.innerHTML += `<option value="${c}" ${c === currentCat ? 'selected' : ''}>${c}</option>`;
+            });
+
+            // Prefijos ZOE
+            const zoePrefixes = [...new Set(INVENTORY.filter(x => x.zce).map(x => x.zce.split('-')[0]))].sort();
+            const prefSelect = document.getElementById('rpt-zoe-filter-prefix');
+            const currentPref = prefSelect.value;
+            prefSelect.innerHTML = '<option value="">Todos los prefijos</option>';
+            zoePrefixes.forEach(p => {
+                prefSelect.innerHTML += `<option value="${p}" ${p === currentPref ? 'selected' : ''}>${p}</option>`;
+            });
+        }
+
+        // ==================== REPORTE: INVENTARIO GENERAL ====================
+        function renderReporteInventario() {
+            const filterEstado = document.getElementById('rpt-inv-filter').value;
+            const filterCat = document.getElementById('rpt-inv-filter-cat').value;
+
+            let data = INVENTORY.slice();
+            if (filterEstado) data = data.filter(x => x.estado === filterEstado);
+            if (filterCat) data = data.filter(x => x.cat === filterCat);
+
+            // Estadísticas
+            const total = INVENTORY.length;
+            const usados = INVENTORY.filter(x => x.estado === 'EN_USO').length;
+            const libres = INVENTORY.filter(x => x.estado === 'SIN_UTILIZAR').length;
+            const conZce = INVENTORY.filter(x => x.zce && x.zce.trim()).length;
+            const sinZce = total - conZce;
+
+            document.getElementById('rpt-inv-total').textContent = total;
+            document.getElementById('rpt-inv-usados').textContent = usados;
+            document.getElementById('rpt-inv-libres').textContent = libres;
+            document.getElementById('rpt-inv-con-zce').textContent = conZce;
+            document.getElementById('rpt-inv-sin-zce').textContent = sinZce;
+
+            // Barras de proporción
+            const pctUsados = total > 0 ? (usados / total * 100) : 0;
+            const pctLibres = total > 0 ? (libres / total * 100) : 0;
+            document.getElementById('rpt-inv-bar-usados').style.width = pctUsados + '%';
+            document.getElementById('rpt-inv-bar-libres').style.width = pctLibres + '%';
+
+            // Tabla
+            const tbody = document.getElementById('rpt-inv-rows');
+            tbody.innerHTML = '';
+            data.sort((a, b) => (a.estado === 'EN_USO' ? 0 : 1) - (b.estado === 'EN_USO' ? 0 : 1) || a.bc.localeCompare(b.bc));
+
+            data.forEach(item => {
+                const badge = item.estado === 'EN_USO'
+                    ? '<span class="inline-flex items-center gap-1 text-rose-300 bg-rose-500/10 border border-rose-500/30 px-2 py-0.5 rounded-full text-[10px] font-bold"><i class="fa-solid fa-link"></i> EN_USO</span>'
+                    : '<span class="inline-flex items-center gap-1 text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full text-[10px] font-bold"><i class="fa-solid fa-circle"></i> LIBRE</span>';
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-800/50';
+                tr.innerHTML = `
+                    <td class="px-4 py-2.5">${badge}</td>
+                    <td class="px-4 py-2.5 font-mono font-bold text-indigo-300 select-all text-xs">${item.bc}</td>
+                    <td class="px-4 py-2.5 font-mono text-white text-xs">${item.zce || '<span class="text-slate-600">—</span>'}</td>
+                    <td class="px-4 py-2.5 text-slate-400 text-xs">${item.cat || '—'}</td>
+                    <td class="px-4 py-2.5 text-slate-500 text-[11px] truncate max-w-[200px]" title="${item.carpeta || ''}">${item.carpeta || '—'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('rpt-inv-count').textContent = `${data.length} de ${total} registros`;
+        }
+
+        function exportReporteInventario() {
+            const rows = document.querySelectorAll('#rpt-inv-rows tr');
+            if (rows.length === 0) { showToast("No hay datos para exportar", true); return; }
+            let csv = "data:text/csv;charset=utf-8,\uFEFF";
+            csv += "ESTADO,EAN-13,ZOE,CATEGORIA,CARPETA\n";
+            INVENTORY.forEach(x => {
+                csv += `${x.estado},"${x.bc}","${x.zce || ''}","${x.cat || ''}","${x.carpeta || ''}"\n`;
+            });
+            downloadCSV(csv, `ZOE_Inventario_General_${fechaStamp()}.csv`);
+            showToast("Reporte de inventario exportado");
+        }
+
+        // ==================== REPORTE: CÓDIGOS ZOE ====================
+        function renderReporteZOE() {
+            const filterPrefix = document.getElementById('rpt-zoe-filter-prefix').value;
+            const filterStatus = document.getElementById('rpt-zoe-filter-status').value;
+
+            // Recopilar todos los códigos ZOE (inventario + sesión)
+            let allZoe = [];
+
+            // Del inventario
+            INVENTORY.filter(x => x.zce && x.zce.trim()).forEach(x => {
+                const m = x.zce.match(/^([A-Z]+)-(\d{4})([A-Z]{2})$/);
+                if (m) {
+                    allZoe.push({
+                        zce: x.zce, prefix: m[1], ident: m[2], suffix: m[3],
+                        bc: x.bc, cat: x.cat, estado: x.estado, source: 'inventario'
+                    });
+                }
+            });
+
+            // De la sesión
+            generatedCodes.forEach(x => {
+                if (!allZoe.some(z => z.zce === x.code)) {
+                    allZoe.push({
+                        zce: x.code, prefix: x.prefix, ident: x.ident, suffix: x.suffix,
+                        bc: x.ean, cat: 'Sesión', estado: 'EN_USO', source: 'sesion'
+                    });
+                }
+            });
+
+            allZoe.sort((a, b) => a.zce.localeCompare(b.zce));
+
+            // Filtros
+            if (filterPrefix) allZoe = allZoe.filter(x => x.prefix === filterPrefix);
+            if (filterStatus === 'CON_BC') allZoe = allZoe.filter(x => x.bc);
+            if (filterStatus === 'SIN_BC') allZoe = allZoe.filter(x => !x.bc);
+
+            // Estadísticas
+            const total = allZoe.length;
+            const conBc = allZoe.filter(x => x.bc).length;
+            const sinBc = total - conBc;
+            const prefixes = [...new Set(allZoe.map(x => x.prefix))].length;
+
+            document.getElementById('rpt-zoe-total').textContent = total;
+            document.getElementById('rpt-zoe-con-bc').textContent = conBc;
+            document.getElementById('rpt-zoe-sin-bc').textContent = sinBc;
+            document.getElementById('rpt-zoe-prefixes').textContent = prefixes;
+
+            // Desglose por prefijo
+            const prefixCounts = {};
+            allZoe.forEach(x => { prefixCounts[x.prefix] = (prefixCounts[x.prefix] || 0) + 1; });
+            const maxCount = Math.max(...Object.values(prefixCounts), 1);
+            const barsContainer = document.getElementById('rpt-zoe-prefix-bars');
+            barsContainer.innerHTML = '';
+            Object.entries(prefixCounts).sort((a, b) => b[1] - a[1]).forEach(([pref, count]) => {
+                const pct = (count / maxCount * 100);
+                barsContainer.innerHTML += `
+                    <div class="flex items-center gap-3">
+                        <span class="font-mono text-xs font-bold text-white w-12">${pref}</span>
+                        <div class="flex-1 bg-slate-800 rounded-full h-4 overflow-hidden">
+                            <div class="bg-indigo-500 h-full rounded-full transition-all" style="width:${pct}%"></div>
+                        </div>
+                        <span class="text-xs text-slate-400 w-8 text-right">${count}</span>
+                    </div>
+                `;
+            });
+
+            // Tabla
+            const tbody = document.getElementById('rpt-zoe-rows');
+            tbody.innerHTML = '';
+            allZoe.forEach(item => {
+                const statusBadge = item.bc
+                    ? '<span class="inline-flex items-center gap-1 text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full text-[10px] font-bold"><i class="fa-solid fa-check"></i> ASIGNADO</span>'
+                    : '<span class="inline-flex items-center gap-1 text-amber-300 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-full text-[10px] font-bold"><i class="fa-solid fa-minus"></i> SIN BC</span>';
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-800/50';
+                tr.innerHTML = `
+                    <td class="px-4 py-2.5 font-mono font-bold text-white text-xs">${item.zce}</td>
+                    <td class="px-4 py-2.5 font-mono text-indigo-300 text-xs">${item.prefix}</td>
+                    <td class="px-4 py-2.5 font-mono text-slate-300 text-xs text-center">${item.ident}</td>
+                    <td class="px-4 py-2.5 font-mono text-slate-300 text-xs text-center">${item.suffix}</td>
+                    <td class="px-4 py-2.5 font-mono text-teal-400 text-xs">${item.bc || '<span class="text-slate-600">—</span>'}</td>
+                    <td class="px-4 py-2.5">${statusBadge}</td>
+                    <td class="px-4 py-2.5 text-slate-400 text-xs">${item.cat || '—'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('rpt-zoe-count').textContent = `${allZoe.length} registros`;
+        }
+
+        function exportReporteZOE() {
+            let allZoe = [];
+            INVENTORY.filter(x => x.zce && x.zce.trim()).forEach(x => {
+                const m = x.zce.match(/^([A-Z]+)-(\d{4})([A-Z]{2})$/);
+                if (m) allZoe.push({ zce: x.zce, prefix: m[1], ident: m[2], suffix: m[3], bc: x.bc, cat: x.cat, estado: x.estado });
+            });
+            generatedCodes.forEach(x => {
+                if (!allZoe.some(z => z.zce === x.code)) allZoe.push({ zce: x.code, prefix: x.prefix, ident: x.ident, suffix: x.suffix, bc: x.ean, cat: 'Sesión', estado: 'EN_USO' });
+            });
+            if (allZoe.length === 0) { showToast("No hay datos para exportar", true); return; }
+            let csv = "data:text/csv;charset=utf-8,\uFEFF";
+            csv += "ZOE,PREFIJO,IDENT,SUFijo,EAN-13,ESTADO,CATEGORIA\n";
+            allZoe.sort((a, b) => a.zce.localeCompare(b.zce)).forEach(x => {
+                csv += `"${x.zce}","${x.prefix}","${x.ident}","${x.suffix}","${x.bc || ''}","${x.estado}","${x.cat || ''}"\n`;
+            });
+            downloadCSV(csv, `ZOE_Codigos_${fechaStamp()}.csv`);
+            showToast("Reporte ZOE exportado");
+        }
+
+        // ==================== REPORTE: CÓDIGOS DE BARRAS ====================
+        function renderReporteBarras() {
+            const filterEstado = document.getElementById('rpt-bc-filter').value;
+            const filterPrefix = document.getElementById('rpt-bc-filter-prefix').value;
+
+            let data = INVENTORY.slice();
+
+            // Filtros
+            if (filterEstado) data = data.filter(x => x.estado === filterEstado);
+            if (filterPrefix === 'CON_ZCE') data = data.filter(x => x.zce && x.zce.trim());
+            if (filterPrefix === 'SIN_ZCE') data = data.filter(x => !x.zce || !x.zce.trim());
+
+            data.sort((a, b) => a.bc.localeCompare(b.bc));
+
+            // Estadísticas
+            const total = INVENTORY.length;
+            const usados = INVENTORY.filter(x => x.estado === 'EN_USO').length;
+            const libres = INVENTORY.filter(x => x.estado === 'SIN_UTILIZAR').length;
+            const pct = total > 0 ? Math.round(usados / total * 100) : 0;
+
+            document.getElementById('rpt-bc-total').textContent = total;
+            document.getElementById('rpt-bc-usados').textContent = usados;
+            document.getElementById('rpt-bc-libres').textContent = libres;
+            document.getElementById('rpt-bc-pct').textContent = pct + '%';
+
+            // Barra de utilización
+            const pctUsados = total > 0 ? (usados / total * 100) : 0;
+            const pctLibres = total > 0 ? (libres / total * 100) : 0;
+            document.getElementById('rpt-bc-bar-usados').style.width = pctUsados + '%';
+            document.getElementById('rpt-bc-bar-libres').style.width = pctLibres + '%';
+            const lblUsados = document.getElementById('rpt-bc-bar-label-usados');
+            const lblLibres = document.getElementById('rpt-bc-bar-label-libres');
+            lblUsados.textContent = pctUsados > 8 ? `${usados} asignados` : '';
+            lblLibres.textContent = pctLibres > 8 ? `${libres} libres` : '';
+
+            // Rangos de secuencial
+            const seqs = INVENTORY.map(x => parseInt(x.bc.substring(7, 12))).filter(n => !isNaN(n)).sort((a, b) => a - b);
+            const rangesContainer = document.getElementById('rpt-bc-ranges');
+            if (seqs.length > 0) {
+                const minSeq = seqs[0];
+                const maxSeq = seqs[seqs.length - 1];
+                const usedSeqs = new Set(seqs);
+                let gaps = [];
+                for (let i = minSeq; i <= maxSeq; i++) {
+                    if (!usedSeqs.has(i)) gaps.push(i);
+                }
+                rangesContainer.innerHTML = `
+                    <div class="bg-slate-900/50 rounded-lg p-2 border border-slate-800">
+                        <span class="text-slate-500">Secuencial mínimo:</span>
+                        <span class="font-mono font-bold text-teal-300 ml-1">${String(minSeq).padStart(5, '0')}</span>
+                    </div>
+                    <div class="bg-slate-900/50 rounded-lg p-2 border border-slate-800">
+                        <span class="text-slate-500">Secuencial máximo:</span>
+                        <span class="font-mono font-bold text-teal-300 ml-1">${String(maxSeq).padStart(5, '0')}</span>
+                    </div>
+                    <div class="bg-slate-900/50 rounded-lg p-2 border border-slate-800">
+                        <span class="text-slate-500">Rangos usados:</span>
+                        <span class="font-mono font-bold text-white ml-1">${usedSeqs.size} de ${maxSeq - minSeq + 1}</span>
+                    </div>
+                    <div class="bg-slate-900/50 rounded-lg p-2 border border-slate-800">
+                        <span class="text-slate-500">Huecos disponibles:</span>
+                        <span class="font-mono font-bold text-emerald-300 ml-1">${gaps.length}</span>
+                        ${gaps.length > 0 && gaps.length <= 20 ? '<span class="text-[10px] text-slate-500 ml-1">(' + gaps.map(g => String(g).padStart(5,'0')).join(', ') + ')</span>' : ''}
+                    </div>
+                `;
+            }
+
+            // Tabla
+            const tbody = document.getElementById('rpt-bc-rows');
+            tbody.innerHTML = '';
+            data.forEach(item => {
+                const seq = item.bc.substring(7, 12);
+                const badge = item.estado === 'EN_USO'
+                    ? '<span class="inline-flex items-center gap-1 text-rose-300 bg-rose-500/10 border border-rose-500/30 px-2 py-0.5 rounded-full text-[10px] font-bold"><i class="fa-solid fa-link"></i> ASIGNADO</span>'
+                    : '<span class="inline-flex items-center gap-1 text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full text-[10px] font-bold"><i class="fa-solid fa-circle"></i> LIBRE</span>';
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-800/50';
+                tr.innerHTML = `
+                    <td class="px-4 py-2.5">${badge}</td>
+                    <td class="px-4 py-2.5 font-mono font-bold text-indigo-300 select-all text-xs">${item.bc}</td>
+                    <td class="px-4 py-2.5 font-mono text-teal-400 text-xs">${seq}</td>
+                    <td class="px-4 py-2.5 font-mono text-white text-xs">${item.zce || '<span class="text-slate-600">—</span>'}</td>
+                    <td class="px-4 py-2.5 text-slate-400 text-xs">${item.cat || '—'}</td>
+                    <td class="px-4 py-2.5 text-slate-500 text-[11px] truncate max-w-[200px]" title="${item.carpeta || ''}">${item.carpeta || '—'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('rpt-bc-count').textContent = `${data.length} de ${total} registros`;
+        }
+
+        function exportReporteBarras() {
+            if (INVENTORY.length === 0) { showToast("No hay datos para exportar", true); return; }
+            let csv = "data:text/csv;charset=utf-8,\uFEFF";
+            csv += "ESTADO,EAN-13,SECUENCIAL,ZOE,CATEGORIA,CARPETA\n";
+            INVENTORY.sort((a, b) => a.bc.localeCompare(b.bc)).forEach(x => {
+                csv += `${x.estado},"${x.bc}","${x.bc.substring(7, 12)}","${x.zce || ''}","${x.cat || ''}","${x.carpeta || ''}"\n`;
+            });
+            downloadCSV(csv, `ZOE_Codigos_Barras_${fechaStamp()}.csv`);
+            showToast("Reporte de códigos de barras exportado");
+        }
+
+        // ==================== UTILIDADES DE REPORTE ====================
+        function fechaStamp() {
+            return new Date().toISOString().slice(0, 10);
+        }
+
+        function downloadCSV(csvContent, filename) {
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", filename);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function printReport(tableId) {
+            const table = document.getElementById(tableId);
+            if (!table) return;
+            const win = window.open('', '_blank');
+            win.document.write(`
+                <html><head><title>Reporte ZOE</title>
+                <style>
+                    body { font-family: Arial, sans-serif; font-size: 11px; padding: 20px; }
+                    table { width: 100%; border-collapse: collapse; }
+                    th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; }
+                    th { background: #f0f0f0; font-weight: bold; text-transform: uppercase; font-size: 9px; }
+                    tr:nth-child(even) { background: #fafafa; }
+                    .font-mono { font-family: monospace; }
+                    @media print { body { padding: 0; } }
+                </style></head><body>
+                <h2 style="margin-bottom:4px">ZOE - Reporte de Inventario</h2>
+                <p style="color:#666;margin-top:0">Generado: ${new Date().toLocaleString('es-VE')}</p>
+                ${table.outerHTML}
+                </body></html>
+            `);
+            win.document.close();
+            win.print();
+        }
 
         function openHelpModal() {
             const modal = document.getElementById('help-modal');
