@@ -64,6 +64,9 @@
                 <button onclick="openEmpaqueSearchModal()" class="px-3 sm:px-4 py-2 text-sm font-medium rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-all duration-200 flex items-center gap-2 border border-slate-800" title="Buscar modelos de empaques ya diseñados">
                     <i class="fa-solid fa-boxes-stacked"></i><span class="hidden md:inline">Empaques</span>
                 </button>
+                <button onclick="openAsignadorModal()" class="px-3 sm:px-4 py-2 text-sm font-medium rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-all duration-200 flex items-center gap-2 border border-slate-800" title="Buscar producto por nombre y asignar código ZOE + barras">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i><span class="hidden md:inline">Asignador</span>
+                </button>
                 <button onclick="openReportesModal()" class="px-3 sm:px-4 py-2 text-sm font-medium rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-all duration-200 flex items-center gap-2 border border-slate-800" title="Generar reportes de inventario, códigos ZOE y barras">
                     <i class="fa-solid fa-chart-pie"></i><span class="hidden md:inline">Reportes</span>
                 </button>
@@ -437,6 +440,194 @@
         </div>
 
     </main>
+
+    <!-- Modal: Asignador de Producto (Busca nombre → auto-genera → asigna ZOE + BC) -->
+    <div id="asignador-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300 p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-5xl max-h-[92vh] flex flex-col shadow-2xl relative">
+            <!-- Header -->
+            <div class="p-5 border-b border-slate-800 flex justify-between items-start gap-4 shrink-0">
+                <div>
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-wand-magic-sparkles text-emerald-400"></i> Asignador de Producto
+                    </h3>
+                    <p class="text-xs text-slate-400 mt-1">Busca por nombre del empaque, selecciona el producto y asigna código ZOE + código de barras en un solo paso.</p>
+                </div>
+                <button onclick="closeAsignadorModal()" class="text-slate-400 hover:text-white text-xl shrink-0">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-5 space-y-5">
+
+                <!-- PASO 1: Buscar producto -->
+                <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+                    <h4 class="text-xs font-bold text-emerald-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                        <span class="bg-emerald-500/20 text-emerald-400 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black">1</span>
+                        Buscar producto por nombre
+                    </h4>
+                    <div class="relative">
+                        <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                        <input type="text" id="asig-search" oninput="asignadorSearch()" placeholder="Escribe el nombre: OSAKA, CERRADURA, MANILLA, DOHA, ACERO INOX..." class="w-full pl-10 pr-4 py-3 bg-slate-900 border border-slate-800 rounded-xl focus:border-emerald-500 focus:outline-none text-white text-sm">
+                    </div>
+                    <p id="asig-search-count" class="text-[10px] text-slate-500 mt-2"></p>
+                </div>
+
+                <!-- PASO 1b: Resultados de búsqueda -->
+                <div id="asig-results" class="hidden bg-slate-950 border border-slate-800 rounded-xl p-4">
+                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-list-check"></i> Resultados — selecciona uno
+                    </h4>
+                    <div id="asig-results-list" class="space-y-2 max-h-[240px] overflow-y-auto"></div>
+                </div>
+
+                <!-- PASO 2: Datos auto-generados del producto seleccionado -->
+                <div id="asig-producto" class="hidden bg-slate-950 border border-emerald-500/30 rounded-xl p-4 space-y-4">
+                    <h4 class="text-xs font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-2">
+                        <span class="bg-emerald-500/20 text-emerald-400 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black">2</span>
+                        Producto seleccionado — descripción auto-generada
+                    </h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div class="bg-slate-900 rounded-lg p-3 border border-slate-800">
+                            <span class="text-[10px] text-slate-500 uppercase">Nombre del producto</span>
+                            <p id="asig-nombre" class="text-white font-bold text-sm mt-1">—</p>
+                        </div>
+                        <div class="bg-slate-900 rounded-lg p-3 border border-slate-800">
+                            <span class="text-[10px] text-slate-500 uppercase">Ciudad / Modelo</span>
+                            <p id="asig-ciudad" class="text-white font-bold text-sm mt-1">—</p>
+                        </div>
+                        <div class="bg-slate-900 rounded-lg p-3 border border-slate-800">
+                            <span class="text-[10px] text-slate-500 uppercase">Material / Color</span>
+                            <p id="asig-material" class="text-white font-bold text-sm mt-1">—</p>
+                        </div>
+                        <div class="bg-slate-900 rounded-lg p-3 border border-slate-800">
+                            <span class="text-[10px] text-slate-500 uppercase">Forma</span>
+                            <p id="asig-forma" class="text-white font-bold text-sm mt-1">—</p>
+                        </div>
+                    </div>
+                    <!-- Descripción generada (editable) -->
+                    <div>
+                        <label class="block text-[10px] text-slate-400 uppercase tracking-wider font-semibold mb-1">Descripción del producto (editable)</label>
+                        <input type="text" id="asig-desc-edit" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg focus:border-emerald-500 focus:outline-none text-white text-sm" placeholder="Se autogenera al seleccionar...">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] text-slate-400 uppercase tracking-wider font-semibold mb-1">Color / Acabado</label>
+                            <input type="text" id="asig-color-edit" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg focus:border-emerald-500 focus:outline-none text-white text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-400 uppercase tracking-wider font-semibold mb-1">Medidas / Uso</label>
+                            <input type="text" id="asig-size-edit" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg focus:border-emerald-500 focus:outline-none text-white text-sm">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PASO 3: Asignar Código ZOE -->
+                <div id="asig-zoe-section" class="hidden bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-4">
+                    <h4 class="text-xs font-bold text-indigo-400 uppercase tracking-widest flex items-center gap-2">
+                        <span class="bg-indigo-500/20 text-indigo-400 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black">3</span>
+                        Asignar Código ZOE
+                    </h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-[10px] text-slate-400 mb-1 uppercase">Prefijo</label>
+                            <select id="asig-prefix" onchange="asignadorGenerateZOE()" class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-lg focus:border-indigo-500 focus:outline-none text-white text-sm font-mono">
+                                <option value="ZCE">ZCE (Herrajes)</option>
+                                <option value="ZCA">ZCA (Accesorios)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-400 mb-1 uppercase">Ident (4 dígitos)</label>
+                            <div class="flex gap-1">
+                                <input type="text" id="asig-ident" maxlength="4" oninput="asignadorGenerateZOE()" class="flex-1 px-3 py-2.5 bg-slate-900 border border-slate-800 rounded-lg focus:border-indigo-500 focus:outline-none text-white text-sm font-mono text-center">
+                                <button onclick="asignadorRandomIdent()" title="Aleatorio" class="px-2.5 bg-slate-800 hover:bg-indigo-500 hover:text-slate-950 text-indigo-400 border border-slate-700 hover:border-indigo-400 rounded-lg transition-all"><i class="fa-solid fa-dice"></i></button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-400 mb-1 uppercase">Sufijo (2 letras)</label>
+                            <input type="text" id="asig-suffix" maxlength="2" oninput="asignadorGenerateZOE()" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-800 rounded-lg focus:border-indigo-500 focus:outline-none text-white text-sm font-mono text-center uppercase">
+                        </div>
+                    </div>
+                    <!-- Preview del ZOE -->
+                    <div class="flex items-center gap-3 bg-slate-900 rounded-lg p-3 border border-slate-800">
+                        <span class="text-[10px] text-slate-500 uppercase">Código resultante:</span>
+                        <span id="asig-zoe-preview" class="font-mono font-black text-xl text-white tracking-wider">—</span>
+                        <span id="asig-zoe-status" class="text-[10px] ml-auto"></span>
+                    </div>
+                </div>
+
+                <!-- PASO 4: Asignar Código de Barras -->
+                <div id="asig-bc-section" class="hidden bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-4">
+                    <h4 class="text-xs font-bold text-amber-400 uppercase tracking-widest flex items-center gap-2">
+                        <span class="bg-amber-500/20 text-amber-400 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black">4</span>
+                        Asignar Código de Barras EAN-13
+                    </h4>
+                    <p class="text-[11px] text-slate-400">Selecciona un código libre de la lista o asigna el siguiente disponible automáticamente.</p>
+
+                    <!-- Asignación rápida -->
+                    <button onclick="asignadorAutoAssignBC()" id="asig-auto-bc-btn" class="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold rounded-xl text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-amber-500/10">
+                        <i class="fa-solid fa-bolt"></i> Asignar siguiente código libre automáticamente
+                    </button>
+
+                    <!-- BC seleccionado -->
+                    <div id="asig-bc-selected" class="hidden bg-slate-900 rounded-lg p-3 border border-amber-500/30 flex items-center gap-3">
+                        <i class="fa-solid fa-check-circle text-amber-400 text-lg"></i>
+                        <div>
+                            <span class="text-[10px] text-slate-500 uppercase">Código asignado:</span>
+                            <p id="asig-bc-code" class="font-mono font-black text-lg text-amber-300">—</p>
+                        </div>
+                        <button onclick="asignadorClearBC()" class="ml-auto text-slate-500 hover:text-rose-400 text-xs"><i class="fa-solid fa-xmark"></i> Quitar</button>
+                    </div>
+
+                    <!-- Lista de libres -->
+                    <div class="max-h-[200px] overflow-y-auto">
+                        <table class="w-full text-left text-xs border-collapse">
+                            <thead class="sticky top-0 bg-slate-900">
+                                <tr class="text-[9px] text-slate-500 uppercase tracking-wider border-b border-slate-800">
+                                    <th class="py-2 pr-2">EAN-13</th>
+                                    <th class="py-2 pr-2">Sec.</th>
+                                    <th class="py-2 pr-2">Categoría</th>
+                                    <th class="py-2 text-center">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="asig-bc-list" class="divide-y divide-slate-800/50"></tbody>
+                        </table>
+                    </div>
+                    <p id="asig-bc-count" class="text-[10px] text-slate-500"></p>
+                </div>
+
+                <!-- PASO 5: Registro final -->
+                <div id="asig-final-section" class="hidden bg-gradient-to-r from-emerald-950 to-slate-900 border border-emerald-500/30 rounded-xl p-5 space-y-4">
+                    <h4 class="text-xs font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-2">
+                        <span class="bg-emerald-500/20 text-emerald-400 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black">5</span>
+                        Registrar Producto Completo
+                    </h4>
+                    <!-- Resumen -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                        <div class="bg-slate-950/50 rounded-lg p-2 border border-slate-800">
+                            <span class="text-[9px] text-slate-500 uppercase">ZOE</span>
+                            <p id="asig-final-zoe" class="font-mono font-bold text-white text-sm">—</p>
+                        </div>
+                        <div class="bg-slate-950/50 rounded-lg p-2 border border-slate-800">
+                            <span class="text-[9px] text-slate-500 uppercase">EAN-13</span>
+                            <p id="asig-final-ean" class="font-mono font-bold text-amber-300 text-sm">—</p>
+                        </div>
+                        <div class="bg-slate-950/50 rounded-lg p-2 border border-slate-800 col-span-2 sm:col-span-1">
+                            <span class="text-[9px] text-slate-500 uppercase">Descripción</span>
+                            <p id="asig-final-desc" class="font-bold text-white text-xs truncate">—</p>
+                        </div>
+                        <div class="bg-slate-950/50 rounded-lg p-2 border border-slate-800">
+                            <span class="text-[9px] text-slate-500 uppercase">Color</span>
+                            <p id="asig-final-color" class="font-bold text-white text-xs">—</p>
+                        </div>
+                    </div>
+                    <button onclick="asignadorRegister()" id="asig-register-btn" class="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black rounded-xl text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-500/20">
+                        <i class="fa-solid fa-circle-check"></i> REGISTRAR PRODUCTO COMPLETO
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
 
     <!-- Modal: Generador de Reportes -->
     <div id="reportes-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300 p-4">
@@ -2013,6 +2204,326 @@
 
         // Cargar catálogo al iniciar
         loadEmpaqueCatalog();
+
+        // =================================================================
+        // ASIGNADOR DE PRODUCTO (Busca nombre → auto-genera → asigna ZOE + BC)
+        // =================================================================
+        let asigSelectedProduct = null;
+        let asigSelectedBC = null;
+
+        function openAsignadorModal() {
+            document.getElementById('asignador-modal').classList.remove('opacity-0', 'pointer-events-none');
+            asigSelectedProduct = null;
+            asigSelectedBC = null;
+            document.getElementById('asig-search').value = '';
+            document.getElementById('asig-results').classList.add('hidden');
+            document.getElementById('asig-producto').classList.add('hidden');
+            document.getElementById('asig-zoe-section').classList.add('hidden');
+            document.getElementById('asig-bc-section').classList.add('hidden');
+            document.getElementById('asig-final-section').classList.add('hidden');
+            document.getElementById('asig-bc-selected').classList.add('hidden');
+            document.getElementById('asig-search-count').textContent = '';
+        }
+
+        function closeAsignadorModal() {
+            document.getElementById('asignador-modal').classList.add('opacity-0', 'pointer-events-none');
+        }
+
+        function asignadorSearch() {
+            const q = (document.getElementById('asig-search').value || '').toLowerCase().trim();
+            const list = document.getElementById('asig-results-list');
+            const container = document.getElementById('asig-results');
+            const countEl = document.getElementById('asig-search-count');
+
+            if (q.length < 2) { container.classList.add('hidden'); countEl.textContent = ''; return; }
+
+            // Buscar en el catálogo de empaques
+            const results = EMPAQUE_CATALOG.filter(item => {
+                const haystack = [item.zce, item.nombre, item.material, item.forma, item.color, item.ciudad, item.extras, item.tamaño].join(' ').toLowerCase();
+                return haystack.includes(q);
+            });
+
+            countEl.textContent = `${results.length} producto(s) encontrado(s)`;
+            list.innerHTML = '';
+
+            if (results.length === 0) {
+                list.innerHTML = '<p class="text-slate-500 text-xs text-center py-4">Sin resultados. Intenta con otro nombre.</p>';
+                container.classList.remove('hidden');
+                return;
+            }
+
+            results.forEach(item => {
+                const isMaster = item.nombre && item.nombre.includes('MASTER');
+                const desc = generarDescripcion(item);
+                const div = document.createElement('div');
+                div.className = 'bg-slate-900 border border-slate-800 hover:border-emerald-500/50 rounded-lg p-3 cursor-pointer transition-all group';
+                div.onclick = () => asignadorSelectProduct(item);
+                div.innerHTML = `
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="font-mono font-bold text-amber-300 text-xs">${item.zce}</span>
+                                ${isMaster ? '<span class="text-[9px] bg-purple-500/10 text-purple-300 border border-purple-500/30 px-1.5 py-0.5 rounded-full font-bold">MASTER</span>' : ''}
+                            </div>
+                            <p class="text-white font-semibold text-sm truncate">${desc}</p>
+                            <p class="text-slate-500 text-[10px] mt-0.5">${item.material || ''} ${item.forma || ''} ${item.ciudad ? '• ' + item.ciudad : ''}</p>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-slate-600 group-hover:text-emerald-400 transition-colors"></i>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+
+            container.classList.remove('hidden');
+        }
+
+        function generarDescriptions(item) {
+            // Genera una descripción legible a partir del catálogo
+            let parts = [];
+            if (item.nombre) parts.push(item.nombre.replace(/-/g, ' '));
+            if (item.material && item.material !== '-') parts.push(item.material);
+            if (item.forma && item.forma !== '-' && item.forma !== 'SIN ROSETA') parts.push(item.forma);
+            if (item.color && item.color !== '-' && item.color !== item.material) parts.push(item.color);
+            if (item.tamaño) parts.push(item.tamaño);
+            if (item.extras) parts.push(item.extras);
+            if (item.ciudad && item.ciudad !== '-') parts.push('(' + item.ciudad + ')');
+            return parts.join(' ').replace(/\s+/g, ' ').trim();
+        }
+
+        function generarDescripcion(item) {
+            return generarDescriptions(item);
+        }
+
+        function asignadorSelectProduct(item) {
+            asigSelectedProduct = item;
+            asigSelectedBC = null;
+
+            const desc = generarDescripcion(item);
+
+            // Llenar datos del producto
+            document.getElementById('asig-nombre').textContent = item.nombre || '—';
+            document.getElementById('asig-ciudad').textContent = (item.ciudad || '—') + (item.tamaño ? ' (' + item.tamaño + ')' : '');
+            document.getElementById('asig-material').textContent = (item.material || '—') + ' / ' + (item.color || '—');
+            document.getElementById('asig-forma').textContent = (item.forma || '—') + (item.lado ? ' • ' + item.lado : '');
+            document.getElementById('asig-desc-edit').value = desc;
+            document.getElementById('asig-color-edit').value = item.color || '';
+            document.getElementById('asig-size-edit').value = item.tamaño || item.forma || '';
+
+            // Mostrar sección del producto
+            document.getElementById('asig-producto').classList.remove('hidden');
+
+            // Auto-seleccionar prefijo ZCE para manillas, ZCA para otros
+            const prefix = (item.nombre && item.nombre.includes('CERRADURA')) ? 'ZCE' : 'ZCE';
+            document.getElementById('asig-prefix').value = prefix;
+
+            // Generar identificador aleatorio
+            asignadorRandomIdent();
+
+            // Sugerir sufijo basado en el tipo
+            let sufijo = 'TP';
+            if (item.nombre && item.nombre.includes('CERRADURA')) sufijo = 'CE';
+            else if (item.forma && item.forma.includes('CUADRADA')) sufijo = 'AG';
+            else if (item.forma && item.forma.includes('OVALADA')) sufijo = 'AH';
+            else if (item.tamaño && item.tamaño.includes('25')) sufijo = 'AF';
+            document.getElementById('asig-suffix').value = sufijo;
+
+            // Mostrar sección ZOE
+            document.getElementById('asig-zoe-section').classList.remove('hidden');
+            asignadorGenerateZOE();
+
+            // Cargar códigos de barras libres
+            loadAsignadorBarcodes();
+
+            // Ocultar resultados de búsqueda
+            document.getElementById('asig-results').classList.add('hidden');
+            document.getElementById('asig-search').value = '';
+            document.getElementById('asig-search-count').textContent = '';
+
+            // Scroll al paso 2
+            document.getElementById('asig-producto').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function asignadorRandomIdent() {
+            const prefix = document.getElementById('asig-prefix').value;
+            const occupied = new Set();
+            INVENTORY.forEach(x => {
+                if (x.zce && x.zce.startsWith(prefix + '-')) {
+                    const m = x.zce.match(/-(\d{4})[A-Z]{2}$/);
+                    if (m) occupied.add(m[1]);
+                }
+            });
+            generatedCodes.forEach(x => {
+                if (x.prefix === prefix) occupied.add(x.ident);
+            });
+            for (let i = 0; i < 200; i++) {
+                const r = Math.floor(1000 + Math.random() * 9000).toString();
+                if (!occupied.has(r)) {
+                    document.getElementById('asig-ident').value = r;
+                    asignadorGenerateZOE();
+                    return;
+                }
+            }
+            showToast("No quedan identificadores para " + prefix, true);
+        }
+
+        function asignadorGenerateZOE() {
+            const prefix = document.getElementById('asig-prefix').value;
+            const ident = document.getElementById('asig-ident').value;
+            const suffix = document.getElementById('asig-suffix').value.toUpperCase();
+            const preview = document.getElementById('asig-zoe-preview');
+            const status = document.getElementById('asig-zoe-status');
+
+            if (ident.length < 4 || suffix.length < 2) {
+                preview.textContent = prefix + '-??????';
+                status.innerHTML = '';
+                return;
+            }
+
+            const zoeCode = `${prefix}-${ident}${suffix}`;
+            preview.textContent = zoeCode;
+
+            // Verificar si ya existe
+            if (USED_ZOE_CODES.has(zoeCode)) {
+                status.innerHTML = '<span class="text-rose-400 font-bold"><i class="fa-solid fa-circle-xmark"></i> YA EXISTE</span>';
+                status.className = 'text-[10px] ml-auto';
+            } else if (generatedCodes.some(c => c.code === zoeCode)) {
+                status.innerHTML = '<span class="text-amber-400 font-bold"><i class="fa-solid fa-triangle-exclamation"></i> EN SESIÓN</span>';
+                status.className = 'text-[10px] ml-auto';
+            } else {
+                status.innerHTML = '<span class="text-emerald-400 font-bold"><i class="fa-solid fa-circle-check"></i> DISPONIBLE</span>';
+                status.className = 'text-[10px] ml-auto';
+                // Mostrar sección de BC
+                document.getElementById('asig-bc-section').classList.remove('hidden');
+                document.getElementById('asig-final-section').classList.remove('hidden');
+                updateAsignadorFinal();
+            }
+        }
+
+        function loadAsignadorBarcodes() {
+            const libres = INVENTORY
+                .filter(x => x.estado === 'SIN_UTILIZAR' && !assignedInSession.has(x.bc))
+                .sort((a, b) => a.bc.localeCompare(b.bc));
+
+            const tbody = document.getElementById('asig-bc-list');
+            tbody.innerHTML = '';
+
+            libres.slice(0, 30).forEach(item => {
+                const seq = item.bc.substring(7, 12);
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-800/50';
+                tr.innerHTML = `
+                    <td class="py-1.5 pr-2 font-mono text-amber-300 select-all">${item.bc}</td>
+                    <td class="py-1.5 pr-2 font-mono text-slate-400">${seq}</td>
+                    <td class="py-1.5 pr-2 text-slate-500 text-[10px]">${item.cat || '—'}</td>
+                    <td class="py-1.5 text-center">
+                        <button onclick="asignadorPickBC('${item.bc}')" class="px-2 py-0.5 bg-emerald-500/90 hover:bg-emerald-400 text-slate-950 rounded text-[10px] font-bold">Asignar</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('asig-bc-count').textContent = `${libres.length} códigos libres disponibles (mostrando ${Math.min(30, libres.length)})`;
+        }
+
+        function asignadorAutoAssignBC() {
+            const libres = INVENTORY.filter(x => x.estado === 'SIN_UTILIZAR' && !assignedInSession.has(x.bc)).sort((a, b) => a.bc.localeCompare(b.bc));
+            if (libres.length === 0) { showToast("No quedan códigos libres", true); return; }
+            asignadorPickBC(libres[0].bc);
+        }
+
+        function asignadorPickBC(bc) {
+            asigSelectedBC = bc;
+            assignedInSession.add(bc);
+            document.getElementById('asig-bc-selected').classList.remove('hidden');
+            document.getElementById('asig-bc-code').textContent = bc;
+            document.getElementById('asig-auto-bc-btn').classList.add('hidden');
+            loadAsignadorBarcodes();
+            updateAsignadorFinal();
+            showToast(`BC ${bc} seleccionado`);
+        }
+
+        function asignadorClearBC() {
+            if (asigSelectedBC) assignedInSession.delete(asigSelectedBC);
+            asigSelectedBC = null;
+            document.getElementById('asig-bc-selected').classList.add('hidden');
+            document.getElementById('asig-auto-bc-btn').classList.remove('hidden');
+            loadAsignadorBarcodes();
+            document.getElementById('asig-final-section').classList.add('hidden');
+        }
+
+        function updateAsignadorFinal() {
+            const prefix = document.getElementById('asig-prefix').value;
+            const ident = document.getElementById('asig-ident').value;
+            const suffix = document.getElementById('asig-suffix').value.toUpperCase();
+            const zoeCode = `${prefix}-${ident}${suffix}`;
+            const desc = document.getElementById('asig-desc-edit').value;
+            const color = document.getElementById('asig-color-edit').value;
+
+            document.getElementById('asig-final-zoe').textContent = zoeCode;
+            document.getElementById('asig-final-ean').textContent = asigSelectedBC || '—';
+            document.getElementById('asig-final-desc').textContent = desc || '—';
+            document.getElementById('asig-final-color').textContent = color || '—';
+
+            if (asigSelectedBC) {
+                document.getElementById('asig-final-section').classList.remove('hidden');
+            }
+        }
+
+        function asignadorRegister() {
+            const prefix = document.getElementById('asig-prefix').value;
+            const ident = document.getElementById('asig-ident').value;
+            const suffix = document.getElementById('asig-suffix').value.toUpperCase();
+            const desc = document.getElementById('asig-desc-edit').value || 'Sin descripción';
+            const color = document.getElementById('asig-color-edit').value || '-';
+            const size = document.getElementById('asig-size-edit').value || '-';
+            const zoeCode = `${prefix}-${ident}${suffix}`;
+
+            if (ident.length < 4) { showToast("Define un identificador de 4 dígitos", true); return; }
+            if (suffix.length < 2) { showToast("Define un sufijo de 2 letras", true); return; }
+            if (!asigSelectedBC) { showToast("Selecciona un código de barras", true); return; }
+
+            // Verificar duplicados
+            if (USED_ZOE_CODES.has(zoeCode)) {
+                showToast(`El código ${zoeCode} ya existe en inventario`, true); return;
+            }
+            if (generatedCodes.some(c => c.code === zoeCode)) {
+                showToast(`El código ${zoeCode} ya está en esta sesión`, true); return;
+            }
+
+            // Registrar en el historial
+            const fullEan = asigSelectedBC;
+            generatedCodes.unshift({
+                code: zoeCode,
+                ean: fullEan,
+                prefix: prefix,
+                ident: ident,
+                suffix: suffix,
+                desc: desc,
+                color: color,
+                size: size,
+                sizeMode: 'size',
+                sizeLabel: 'Medida'
+            });
+
+            USED_BARCODES.add(fullEan);
+            USED_ZOE_CODES.add(zoeCode);
+            assignedInSession.delete(fullEan);
+
+            renderHistory();
+            updateInventoryCounters();
+
+            showToast(`¡Producto registrado! ${zoeCode} → ${fullEan}`);
+
+            // Reset del asignador
+            document.getElementById('asig-producto').classList.add('hidden');
+            document.getElementById('asig-zoe-section').classList.add('hidden');
+            document.getElementById('asig-bc-section').classList.add('hidden');
+            document.getElementById('asig-final-section').classList.add('hidden');
+            document.getElementById('asig-bc-selected').classList.add('hidden');
+            document.getElementById('asig-auto-bc-btn').classList.remove('hidden');
+            asigSelectedProduct = null;
+            asigSelectedBC = null;
+        }
 
         // =================================================================
         // GENERADOR DE REPORTES
